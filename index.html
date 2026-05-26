@@ -20,12 +20,6 @@
           emailjs.init('Cwjj37r4vlqMA8F83');
        })();
     </script>
-    <!-- Firebase SDK (v8) -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <!-- html2pdf SDK -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -33,26 +27,10 @@
     <div id="map-bg"></div>
 
     <!-- 2. Branding Overlay -->
-    <div class="floating-brand glass-panel" style="border-radius: 50px; display: flex; align-items: center; justify-content: space-between;">
-        <div style="display: flex; align-items: center;">
-            <i class="ph-fill ph-airplane-tilt brand-logo"></i>
-            <span class="brand-title" style="margin-right: 1rem;">THY Route</span>
-            <button id="btn-reset" class="btn" style="padding: 0.5rem; background: transparent;"><i class="ph ph-arrow-counter-clockwise"></i> Başa Dön</button>
-        </div>
-        
-        <!-- Auth Section -->
-        <div id="auth-section" style="display:flex; align-items:center; gap:0.5rem; margin-left: 1rem; border-left: 1px solid var(--thy-grey-border); padding-left: 1rem;">
-            <button id="btn-login" class="btn" style="padding: 0.5rem 1rem; background: var(--thy-red); color: white; border-radius: 20px; font-size: 0.9rem; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
-                <i class="ph-bold ph-google-logo"></i> Giriş Yap
-            </button>
-            <div id="user-profile" style="display:none; align-items:center; gap:0.5rem;">
-                <img id="user-avatar" src="" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid white; box-shadow: var(--shadow-sm);">
-                <span id="user-name" style="font-weight: 600; font-size: 0.9rem; color: var(--thy-dark-blue);"></span>
-                <button id="btn-logout" class="btn" style="padding: 0.3rem; background: transparent; color: var(--thy-grey-text); border: none; cursor: pointer;" title="Çıkış Yap">
-                    <i class="ph-bold ph-sign-out" style="font-size: 1.1rem;"></i>
-                </button>
-            </div>
-        </div>
+    <div class="floating-brand glass-panel" style="border-radius: 50px;">
+        <i class="ph-fill ph-airplane-tilt brand-logo"></i>
+        <span class="brand-title" style="margin-right: 1rem;">THY Route</span>
+        <button id="btn-reset" class="btn" style="padding: 0.5rem; background: transparent;"><i class="ph ph-arrow-counter-clockwise"></i> Başa Dön</button>
     </div>
 
     <!-- 3. Search Engine Layer (Glassmorphism) -->
@@ -142,12 +120,9 @@
         </div>
 
 
-        <div style="padding: 1.5rem; border-top: 1px solid var(--thy-grey-border); background: rgba(255,255,255,0.9); display: flex; gap: 0.5rem;">
-            <button id="btn-complete-route" class="btn btn-primary" style="flex: 1;">
-                <i class="ph-fill ph-check-circle"></i> Rotayı Tamamla
-            </button>
-            <button id="btn-download-pdf" class="btn" style="flex: 1; background: var(--thy-dark-blue); color: white; border: none;">
-                <i class="ph-fill ph-file-pdf"></i> PDF İndir
+        <div style="padding: 1.5rem; border-top: 1px solid var(--thy-grey-border); background: rgba(255,255,255,0.9);">
+            <button id="btn-complete-route" class="btn btn-primary" style="width: 100%;">
+                <i class="ph-fill ph-check-circle"></i> Rotayı Tamamla (500 Mil)
             </button>
         </div>
     </aside>

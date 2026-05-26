@@ -1,54 +1,6 @@
 // app.js - Full Premium Flow: Search -> Ticket Booking -> Journal
 // + Collaborative Notes, Route Editing, Multi-User Simulation
 
-// ============================
-// FIREBASE REALTIME DB CONFIGURATION
-// ============================
-const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-};
-
-// Initialize Firebase safely
-let db = null;
-let auth = null;
-let googleProvider = null;
-let firebaseInitialized = false;
-
-const isFirebaseConfigured = 
-    firebaseConfig && 
-    firebaseConfig.apiKey && 
-    firebaseConfig.apiKey !== "YOUR_API_KEY" && 
-    !firebaseConfig.apiKey.startsWith("YOUR_");
-
-if (isFirebaseConfigured) {
-    try {
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        db = firebase.database();
-        auth = firebase.auth();
-        googleProvider = new firebase.auth.GoogleAuthProvider();
-        firebaseInitialized = true;
-        console.log("Firebase initialized successfully.");
-    } catch (e) {
-        console.error("Firebase initialization failed:", e);
-        db = null;
-        auth = null;
-        googleProvider = null;
-        firebaseInitialized = false;
-    }
-} else {
-    console.warn("Firebase credentials are not configured. Running in Local Storage fallback mode.");
-}
-
-let currentUserData = null;
-
 let mapInstance = null;
 let markersLayer = null;
 
@@ -65,11 +17,9 @@ let departureBoardInterval = null;
 let isCollaborator = false;
 let currentViewDay = 'all'; // Track which day tab is active
 let collabNotes = {}; // { "1": [{id, text, author, timestamp, edited}], "2": [...] }
-let tripId = null;
-let isSyncing = false; // Prevent loop during remote updates
 
 // ============================
-// LOCALSTORAGE & FIREBASE PERSISTENCE LAYER
+// LOCALSTORAGE PERSISTENCE LAYER
 // ============================
 const LS_KEYS = {
     ITINERARY: 'thy_route_itinerary',
@@ -80,22 +30,12 @@ const LS_KEYS = {
 };
 
 function saveItineraryToStorage() {
-    if (isSyncing) return;
     try {
         localStorage.setItem(LS_KEYS.ITINERARY, JSON.stringify(currentItinerary));
         localStorage.setItem(LS_KEYS.DEST, currentDest);
         localStorage.setItem(LS_KEYS.ORIGIN, currentOrigin);
         localStorage.setItem(LS_KEYS.DAYS, totalPlannedDays.toString());
-        
-        if (tripId && db) {
-            db.ref('trips/' + tripId + '/itineraryData').set({
-                itinerary: currentItinerary,
-                dest: currentDest,
-                origin: currentOrigin,
-                days: totalPlannedDays
-            });
-        }
-    } catch(e) { console.warn('localStorage/Firebase kaydetme hatası:', e); }
+    } catch(e) { console.warn('localStorage kaydetme hatası:', e); }
 }
 
 function loadItineraryFromStorage() {
@@ -113,13 +53,9 @@ function loadItineraryFromStorage() {
 }
 
 function saveNotesToStorage() {
-    if (isSyncing) return;
     try {
         localStorage.setItem(LS_KEYS.NOTES, JSON.stringify(collabNotes));
-        if (tripId && db) {
-            db.ref('trips/' + tripId + '/notesData').set(collabNotes);
-        }
-    } catch(e) { console.warn('Not/Firebase kaydetme hatası:', e); }
+    } catch(e) { console.warn('Not kaydetme hatası:', e); }
 }
 
 function loadNotesFromStorage() {
@@ -134,7 +70,6 @@ function loadNotesFromStorage() {
 }
 
 function getCurrentUser() {
-    if (currentUserData) return currentUserData.displayName || 'Kullanıcı';
     return isCollaborator ? 'Misafir' : 'Bora';
 }
 
@@ -156,73 +91,13 @@ function formatNoteTime(ts) {
 // DOMContentLoaded - INIT
 // ============================
 document.addEventListener('DOMContentLoaded', () => {
-    // Check for ?join=true and ?tripId in URL
+    // Check for ?join=true in URL to show online indicator + enable collab
     const urlParams = new URLSearchParams(window.location.search);
-    tripId = urlParams.get('tripId');
-    if (!tripId) {
-        tripId = 'trip_' + Math.random().toString(36).substr(2, 9);
-        const newUrl = new URL(window.location);
-        newUrl.searchParams.set('tripId', tripId);
-        window.history.replaceState(null, '', newUrl.toString());
-    }
-
     if(urlParams.get('join') === 'true') {
         isCollaborator = true;
         const indicator = document.getElementById('online-indicator');
         if(indicator) indicator.style.display = 'block';
     }
-
-    // Setup Firebase Auth Listener
-    if (auth) {
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                currentUserData = user;
-                document.getElementById('btn-login').style.display = 'none';
-                document.getElementById('user-profile').style.display = 'flex';
-                document.getElementById('user-name').textContent = user.displayName;
-                document.getElementById('user-avatar').src = user.photoURL;
-            } else {
-                currentUserData = null;
-                document.getElementById('btn-login').style.display = 'flex';
-                document.getElementById('user-profile').style.display = 'none';
-            }
-        });
-    } else {
-        document.getElementById('btn-login').style.display = 'flex';
-        document.getElementById('user-profile').style.display = 'none';
-    }
-
-    const btnLogin = document.getElementById('btn-login');
-    if (btnLogin) {
-        btnLogin.addEventListener('click', () => {
-            if (auth && googleProvider) {
-                auth.signInWithPopup(googleProvider).catch(err => showToast("Giriş başarısız: " + err.message));
-            } else {
-                showToast("Firebase yapılandırılmadığı için giriş özelliği yerel modda aktif değildir.");
-            }
-        });
-    }
-
-    const btnLogout = document.getElementById('btn-logout');
-    if (btnLogout) {
-        btnLogout.addEventListener('click', () => {
-            if (auth) {
-                auth.signOut();
-            } else {
-                currentUserData = null;
-                document.getElementById('btn-login').style.display = 'flex';
-                document.getElementById('user-profile').style.display = 'none';
-            }
-        });
-    }
-
-    const btnDownloadPdf = document.getElementById('btn-download-pdf');
-    if (btnDownloadPdf) {
-        btnDownloadPdf.addEventListener('click', exportToPdf);
-    }
-
-    // Setup Firebase Realtime Listeners
-    setupRealtimeListeners();
 
     // Load saved notes
     loadNotesFromStorage();
@@ -266,60 +141,11 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 document.getElementById('journal-sidebar').classList.add('active');
                 showToast('Ortak plana başarıyla katıldınız! 🎉');
+                startMultiUserSimulation();
             }, 500);
         }
     }
 });
-
-// FIREBASE REALTIME LISTENERS
-function setupRealtimeListeners() {
-    if (!tripId || !db) return;
-
-    db.ref('trips/' + tripId + '/itineraryData').on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data && data.itinerary) {
-            isSyncing = true;
-            currentItinerary = data.itinerary;
-            currentDest = data.dest || currentDest;
-            currentOrigin = data.origin || currentOrigin;
-            totalPlannedDays = data.days || totalPlannedDays;
-            
-            // Only re-render if journal is active
-            if (document.getElementById('journal-sidebar').classList.contains('active')) {
-                renderDaysTabs();
-                renderJournalDay(currentViewDay);
-            }
-            isSyncing = false;
-        }
-    });
-
-    db.ref('trips/' + tripId + '/notesData').on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-            isSyncing = true;
-            collabNotes = data;
-            
-            // Only update notes if journal is active
-            if (document.getElementById('journal-sidebar').classList.contains('active')) {
-                // Update notes lists without destroying input focus by rendering all day cards
-                for (let i = 1; i <= totalPlannedDays; i++) {
-                    const dayKey = String(i);
-                    const notesList = document.getElementById(`notes-list-${dayKey}`);
-                    if (notesList) {
-                        const notes = collabNotes[dayKey] || [];
-                        if (notes.length === 0) {
-                            notesList.innerHTML = `<div class="collab-notes-empty"><i class="ph ph-note-blank"></i> Henüz not eklenmedi.</div>`;
-                        } else {
-                            notesList.innerHTML = notes.map(note => buildNoteItem(note, dayKey)).join('');
-                        }
-                    }
-                    updateNoteBadge(dayKey);
-                }
-            }
-            isSyncing = false;
-        }
-    });
-}
 
 // FLUID MAP BACKGROUND (Light Theme)
 function initFluidMap() {
@@ -682,6 +508,9 @@ function confirmFlightBooking() {
     // Slide in sidebar
     setTimeout(() => {
         document.getElementById('journal-sidebar').classList.add('active');
+        if (isCollaborator) {
+            startMultiUserSimulation();
+        }
     }, 300);
 }
 
@@ -1282,8 +1111,8 @@ function handleInviteSubmit(e) {
     
     document.getElementById('invite-modal-premium').classList.remove('active');
     
-    // 1. Dinamik Davet Linki Oluşturma (Trip ID dahil)
-    const inviteLink = window.location.origin + window.location.pathname + '?tripId=' + tripId + '&join=true';
+    // 1. Dinamik Davet Linki Oluşturma
+    const inviteLink = window.location.origin + window.location.pathname + '?join=true';
     
     // 2. EmailJS Parametreleri
     const templateParams = {
@@ -1395,75 +1224,75 @@ function updateBoardTicker() {
 }
 
 // ============================
-// PDF EXPORT
+// MULTI-USER SIMULATION ENGINE
 // ============================
-function exportToPdf() {
-    showToast("PDF hazırlanıyor, lütfen bekleyin...");
+function startMultiUserSimulation() {
+    if (!isCollaborator) return;
     
-    // Create a temporary wrapper for printing
-    const printWrapper = document.createElement('div');
-    printWrapper.style.padding = '2rem';
-    printWrapper.style.background = '#F9FAFB'; // Light grey background
-    printWrapper.style.color = '#232B38';
-    printWrapper.style.fontFamily = 'Inter, sans-serif';
+    // Simulation 1: Ali adds a note after 10 seconds
+    setTimeout(() => {
+        if (currentItinerary.length === 0) return;
+        
+        const dayKey = "1";
+        if (!collabNotes[dayKey]) collabNotes[dayKey] = [];
+        
+        const simulatedNote = {
+            id: 'n_sim_' + Math.random().toString(36).substr(2, 9),
+            text: "Bölgedeki yerel lezzetleri denemek için harika restoranlar var! 🍜",
+            author: "Ali",
+            timestamp: Date.now(),
+            edited: false
+        };
+        
+        collabNotes[dayKey].push(simulatedNote);
+        saveNotesToStorage();
+        
+        // Re-render notes for this day
+        const notesList = document.getElementById(`notes-list-${dayKey}`);
+        if (notesList) {
+            if (notesList.querySelector('.collab-notes-empty')) {
+                notesList.innerHTML = '';
+            }
+            notesList.innerHTML = collabNotes[dayKey].map(note => buildNoteItem(note, dayKey)).join('');
+        }
+        updateNoteBadge(dayKey);
+        showToast("Ali gruba yeni bir not ekledi! 📝");
+    }, 10000);
     
-    // Add THY Header
-    printWrapper.innerHTML = `
-        <div style="text-align: center; margin-bottom: 2rem; border-bottom: 2px solid #E81932; padding-bottom: 1.5rem;">
-            <i class="ph-fill ph-airplane-tilt" style="color: #E81932; font-size: 3.5rem;"></i>
-            <h1 style="color: #232B38; margin-top: 0.5rem; font-family: Outfit, sans-serif;">THY Seyahat Rotası</h1>
-            <p style="font-size: 1.2rem; color: #5F6B7C; font-weight: 500;">
-                ${currentOrigin} <i class="ph ph-arrow-right" style="vertical-align: middle;"></i> ${currentDest} 
-                <br><span style="font-size: 0.9rem; color: #9CA3AF;">${totalPlannedDays} Günlük Plan</span>
-            </p>
-        </div>
-    `;
-
-    // Clone the places container
-    const originalContainer = document.getElementById('places-container');
-    const clonedPlaces = originalContainer.cloneNode(true);
-    
-    // Cleanup for PDF (Remove buttons, inputs, headers etc.)
-    clonedPlaces.querySelectorAll('.place-card-actions').forEach(el => el.remove());
-    clonedPlaces.querySelectorAll('.add-place-wrapper').forEach(el => el.remove());
-    clonedPlaces.querySelectorAll('.collab-notes-toggle').forEach(el => el.remove());
-    clonedPlaces.querySelectorAll('.collab-note-input-group').forEach(el => el.remove());
-    clonedPlaces.querySelectorAll('.note-actions').forEach(el => el.remove());
-    clonedPlaces.querySelectorAll('.collab-notes-empty').forEach(el => el.remove());
-    
-    // Ensure notes are visible
-    clonedPlaces.querySelectorAll('.collab-notes-body').forEach(el => {
-        el.style.display = 'block';
-        el.style.maxHeight = 'none';
-        el.style.opacity = '1';
-        el.style.border = 'none';
-        el.style.background = 'transparent';
-        el.style.paddingLeft = '1rem';
-        el.style.marginTop = '1rem';
-    });
-    
-    printWrapper.appendChild(clonedPlaces);
-
-    // Provide some styling fixes for cloned cards
-    const cards = printWrapper.querySelectorAll('.premium-place-card');
-    cards.forEach(card => {
-        card.style.boxShadow = 'none';
-        card.style.border = '1px solid #E5E7EB';
-        card.style.breakInside = 'avoid'; // Prevent breaking across pages
-    });
-
-    const opt = {
-        margin:       0.5,
-        filename:     \`THY_Seyahat_Plani_\${currentDest}.pdf\`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(printWrapper).save().then(() => {
-        showToast("PDF başarıyla indirildi! 📄");
-    }).catch(err => {
-        console.error("PDF Hatası:", err);
-        showToast("PDF oluşturulurken hata oluştu.");
-    });
+    // Simulation 2: Ayşe adds a new place after 20 seconds
+    setTimeout(() => {
+        if (currentItinerary.length === 0) return;
+        
+        const dayNumber = 1;
+        const port = ALL_PORTS.find(p => p.code === currentDest) || ALL_PORTS[0];
+        const latOffset = (Math.random() - 0.5) * 0.04;
+        const lngOffset = (Math.random() - 0.5) * 0.04;
+        
+        const simulatedPlace = {
+            name: "Yerel Çarşı (Simülasyon)",
+            category: "Yemek",
+            duration: "2 Saat",
+            coordinates: {
+                lat: port.lat + latOffset,
+                lng: port.lng + lngOffset
+            },
+            payWithMiles: true,
+            milesCost: 1200,
+            addedBy: "Ayşe",
+            rating: "4.8",
+            recommendation: "Geleneksel lezzetleri ve el sanatlarını keşfetmek için harika bir yer.",
+            imageUrl: `https://picsum.photos/seed/localmarket/200/200`
+        };
+        
+        const dayData = currentItinerary.find(x => x.day === dayNumber);
+        if (dayData) {
+            dayData.places.push(simulatedPlace);
+            saveItineraryToStorage();
+            
+            // Re-render journal day and map
+            renderJournalDay(currentViewDay);
+            showToast("Ayşe rotaya yeni bir yer ekledi! 📍");
+        }
+    }, 20000);
 }
+
