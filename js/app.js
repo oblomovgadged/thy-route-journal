@@ -161,49 +161,208 @@ function showFlightSelection() {
     }
 }
 
-function renderFlightCards(from, to, type) {
-    const container = document.getElementById('flight-cards-container');
-    const mockFlights = [
-        { dep: '02:25', arr: '19:45', no: `TK ${Math.floor(Math.random()*100)+10}`, aircraft: 'Airbus A350-900', eco: '8.500', bus: '24.000' },
-        { dep: '15:20', arr: '08:45', no: `TK ${Math.floor(Math.random()*100)+10}`, aircraft: 'Boeing 787-9 Dreamliner', eco: '9.200', bus: '26.500' }
+function generateRealisticFlights(from, to) {
+    const originData = ALL_PORTS.find(p => p.code === from) || ALL_PORTS[0];
+    const destData = ALL_PORTS.find(p => p.code === to) || ALL_PORTS[0];
+    
+    // Calculate pseudo-distance for flight duration (rough estimate)
+    const latDiff = originData.lat - destData.lat;
+    const lngDiff = originData.lng - destData.lng;
+    const distanceKm = Math.sqrt(latDiff*latDiff + lngDiff*lngDiff) * 111; 
+    let durationMins = Math.max(60, Math.floor(distanceKm / 12)); 
+    const hours = Math.floor(durationMins / 60);
+    const mins = durationMins % 60;
+    const durationStr = `${hours}sa ${mins}dk`;
+
+    const basePrice = Math.max(1500, Math.floor(distanceKm * 2.5));
+
+    const aircrafts = [
+        { type: 'Airbus A350-900', feature: 'Wi-Fi ve 4K Geniş Ekran' },
+        { type: 'Boeing 787-9 Dreamliner', feature: 'Geniş Camlar ve Wi-Fi' },
+        { type: 'Airbus A330', feature: 'Uçak İçi Eğlence Sistemi' }
     ];
 
-    mockFlights.forEach((f) => {
+    const flights = [];
+    const numFlights = Math.floor(Math.random() * 3) + 6; // 6 to 8 flights
+    
+    // Spread across different times of the day
+    const timeSlots = [
+        { start: 1, end: 5 },   // Gece
+        { start: 6, end: 11 },  // Sabah
+        { start: 12, end: 16 }, // Öğle
+        { start: 17, end: 23 }  // Akşam
+    ];
+
+    for (let i = 0; i < numFlights; i++) {
+        const slot = timeSlots[i % timeSlots.length];
+        const depHour = Math.floor(Math.random() * (slot.end - slot.start + 1)) + slot.start;
+        const depMin = Math.floor(Math.random() * 12) * 5; // intervals of 5 mins
+        
+        let arrHour = (depHour + hours) % 24;
+        let arrMin = (depMin + mins) % 60;
+        if (arrMin >= 60) {
+            arrMin -= 60;
+            arrHour = (arrHour + 1) % 24;
+        }
+
+        const depStr = `${String(depHour).padStart(2, '0')}:${String(depMin).padStart(2, '0')}`;
+        const arrStr = `${String(arrHour).padStart(2, '0')}:${String(arrMin).padStart(2, '0')}`;
+        
+        const ac = aircrafts[Math.floor(Math.random() * aircrafts.length)];
+
+        flights.push({
+            id: `flight-${Math.random().toString(36).substr(2, 9)}`,
+            dep: depStr,
+            arr: arrStr,
+            duration: durationStr,
+            no: `TK ${Math.floor(Math.random()*2000)+1000}`,
+            aircraft: ac.type,
+            feature: ac.feature,
+            prices: {
+                ecoFly: (basePrice).toLocaleString('tr-TR'),
+                extraFly: (basePrice * 1.3).toLocaleString('tr-TR'),
+                primeFly: (basePrice * 1.6).toLocaleString('tr-TR'),
+                business: (basePrice * 3.5).toLocaleString('tr-TR')
+            },
+            miles: {
+                ecoFly: Math.floor(distanceKm * 0.5),
+                extraFly: Math.floor(distanceKm * 0.75),
+                primeFly: Math.floor(distanceKm * 1),
+                business: Math.floor(distanceKm * 2)
+            }
+        });
+    }
+
+    // Sort by departure time
+    return flights.sort((a, b) => {
+        const [ah, am] = a.dep.split(':').map(Number);
+        const [bh, bm] = b.dep.split(':').map(Number);
+        return (ah*60+am) - (bh*60+bm);
+    });
+}
+
+function renderFlightCards(from, to, type) {
+    const container = document.getElementById('flight-cards-container');
+    const flights = generateRealisticFlights(from, to);
+
+    container.innerHTML = '';
+
+    flights.forEach((f) => {
         container.innerHTML += `
-            <div class="flight-ticket-card">
-                <div class="flight-times">
-                    <div class="time-block">
-                        <h3>${f.dep}</h3>
-                        <p>${from}</p>
+            <div class="flight-ticket-card accordion-card" id="${f.id}">
+                <div class="flight-card-header" onclick="toggleAccordion('${f.id}')">
+                    <div class="flight-times">
+                        <div class="time-block">
+                            <h3>${f.dep}</h3>
+                            <p>${from}</p>
+                        </div>
+                        <div class="flight-duration">
+                            <span style="font-size:0.8rem; color:var(--thy-grey-text);">${f.duration} Direkt Uçuş</span>
+                            <i class="ph-fill ph-airplane-right"></i>
+                        </div>
+                        <div class="time-block">
+                            <h3>${f.arr}</h3>
+                            <p>${to}</p>
+                        </div>
                     </div>
-                    <div class="flight-duration">
-                        <span style="font-size:0.8rem; color:var(--thy-grey-text);">Direkt Uçuş</span>
-                        <i class="ph-fill ph-airplane-right"></i>
+                    
+                    <div class="aircraft-info">
+                        <div class="aircraft-badge"><i class="ph-fill ph-airplane"></i> ${f.aircraft}</div>
+                        <div class="feature-badge"><i class="ph-fill ph-star"></i> ${f.feature}</div>
+                        <div style="font-weight:600; margin-top: 0.5rem; color: var(--thy-grey-text); font-size: 0.85rem;">Sefer: ${f.no}</div>
                     </div>
-                    <div class="time-block">
-                        <h3>${f.arr}</h3>
-                        <p>${to}</p>
+
+                    <div class="accordion-icon">
+                        <i class="ph ph-caret-down"></i>
                     </div>
-                </div>
-                
-                <div class="aircraft-info">
-                    <div class="aircraft-badge">${f.aircraft}</div>
-                    <div style="font-weight:600;">Sefer: ${f.no}</div>
                 </div>
 
-                <div class="class-options">
-                    <button class="class-btn class-eco" onclick="selectFlightOption('${type}')">
-                        <span>Eco Fly</span>
-                        <span>${f.eco} ₺</span>
-                    </button>
-                    <button class="class-btn class-bus" onclick="selectFlightOption('${type}')">
-                        <span>Business</span>
-                        <span>${f.bus} ₺</span>
-                    </button>
+                <div class="flight-card-body" style="display: none;">
+                    <h4 style="margin-bottom: 1rem; color: var(--thy-dark-blue);">Sınıf Seçimi</h4>
+                    <div class="fare-tabs">
+                        <!-- Eco Fly -->
+                        <div class="fare-card eco-fly" onclick="selectFlightOption('${type}')">
+                            <div class="fare-header">
+                                <h5>Eco Fly</h5>
+                            </div>
+                            <div class="fare-price">
+                                <span>${f.prices.ecoFly} ₺</span>
+                            </div>
+                            <ul class="fare-features">
+                                <li><i class="ph ph-check"></i> 1 Parça 15 kg Bagaj</li>
+                                <li><i class="ph ph-x" style="color:var(--thy-red);"></i> Ücretsiz Koltuk Seçimi</li>
+                                <li><i class="ph ph-x" style="color:var(--thy-red);"></i> Değişiklik/İade</li>
+                            </ul>
+                            <div class="fare-miles">+${f.miles.ecoFly} Mil</div>
+                        </div>
+
+                        <!-- ExtraFly -->
+                        <div class="fare-card extra-fly" onclick="selectFlightOption('${type}')">
+                            <div class="fare-header">
+                                <h5>ExtraFly</h5>
+                            </div>
+                            <div class="fare-price">
+                                <span>${f.prices.extraFly} ₺</span>
+                            </div>
+                            <ul class="fare-features">
+                                <li><i class="ph ph-check"></i> 1 Parça 20 kg Bagaj</li>
+                                <li><i class="ph ph-check"></i> Standart Koltuk Seçimi</li>
+                                <li><i class="ph ph-x" style="color:var(--thy-red);"></i> Değişiklik/İade</li>
+                            </ul>
+                            <div class="fare-miles">+${f.miles.extraFly} Mil</div>
+                        </div>
+
+                        <!-- Business -->
+                        <div class="fare-card business-fly" onclick="selectFlightOption('${type}')">
+                            <div class="fare-header">
+                                <h5>Business</h5>
+                            </div>
+                            <div class="fare-price">
+                                <span>${f.prices.business} ₺</span>
+                            </div>
+                            <ul class="fare-features">
+                                <li><i class="ph ph-check"></i> 2 Parça 30 kg Bagaj</li>
+                                <li><i class="ph ph-check"></i> CIP Salon Kullanımı</li>
+                                <li><i class="ph ph-check"></i> Ücretsiz Değişiklik/İade</li>
+                            </ul>
+                            <div class="fare-miles">+${f.miles.business} Mil</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
     });
+}
+
+function toggleAccordion(id) {
+    const card = document.getElementById(id);
+    const body = card.querySelector('.flight-card-body');
+    const icon = card.querySelector('.accordion-icon i');
+
+    // Close all others
+    document.querySelectorAll('.accordion-card').forEach(c => {
+        if(c.id !== id) {
+            c.classList.remove('expanded');
+            c.querySelector('.flight-card-body').style.display = 'none';
+            const otherIcon = c.querySelector('.accordion-icon i');
+            if (otherIcon) {
+                otherIcon.classList.remove('ph-caret-up');
+                otherIcon.classList.add('ph-caret-down');
+            }
+        }
+    });
+
+    if (card.classList.contains('expanded')) {
+        card.classList.remove('expanded');
+        body.style.display = 'none';
+        icon.classList.remove('ph-caret-up');
+        icon.classList.add('ph-caret-down');
+    } else {
+        card.classList.add('expanded');
+        body.style.display = 'block';
+        icon.classList.remove('ph-caret-down');
+        icon.classList.add('ph-caret-up');
+    }
 }
 
 function selectFlightOption(type) {
