@@ -14,13 +14,38 @@ const firebaseConfig = {
     appId: "YOUR_APP_ID"
 };
 
-// Initialize Firebase
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
+// Initialize Firebase safely
+let db = null;
+let auth = null;
+let googleProvider = null;
+let firebaseInitialized = false;
+
+const isFirebaseConfigured = 
+    firebaseConfig && 
+    firebaseConfig.apiKey && 
+    firebaseConfig.apiKey !== "YOUR_API_KEY" && 
+    !firebaseConfig.apiKey.startsWith("YOUR_");
+
+if (isFirebaseConfigured) {
+    try {
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        db = firebase.database();
+        auth = firebase.auth();
+        googleProvider = new firebase.auth.GoogleAuthProvider();
+        firebaseInitialized = true;
+        console.log("Firebase initialized successfully.");
+    } catch (e) {
+        console.error("Firebase initialization failed:", e);
+        db = null;
+        auth = null;
+        googleProvider = null;
+        firebaseInitialized = false;
+    }
+} else {
+    console.warn("Firebase credentials are not configured. Running in Local Storage fallback mode.");
 }
-const db = firebase.database();
-const auth = firebase.auth();
-const googleProvider = new firebase.auth.GoogleAuthProvider();
 
 let currentUserData = null;
 
@@ -62,7 +87,7 @@ function saveItineraryToStorage() {
         localStorage.setItem(LS_KEYS.ORIGIN, currentOrigin);
         localStorage.setItem(LS_KEYS.DAYS, totalPlannedDays.toString());
         
-        if (tripId) {
+        if (tripId && db) {
             db.ref('trips/' + tripId + '/itineraryData').set({
                 itinerary: currentItinerary,
                 dest: currentDest,
@@ -91,7 +116,7 @@ function saveNotesToStorage() {
     if (isSyncing) return;
     try {
         localStorage.setItem(LS_KEYS.NOTES, JSON.stringify(collabNotes));
-        if (tripId) {
+        if (tripId && db) {
             db.ref('trips/' + tripId + '/notesData').set(collabNotes);
         }
     } catch(e) { console.warn('Not/Firebase kaydetme hatası:', e); }
@@ -148,31 +173,46 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Setup Firebase Auth Listener
-    auth.onAuthStateChanged((user) => {
-        if (user) {
-            currentUserData = user;
-            document.getElementById('btn-login').style.display = 'none';
-            document.getElementById('user-profile').style.display = 'flex';
-            document.getElementById('user-name').textContent = user.displayName;
-            document.getElementById('user-avatar').src = user.photoURL;
-        } else {
-            currentUserData = null;
-            document.getElementById('btn-login').style.display = 'flex';
-            document.getElementById('user-profile').style.display = 'none';
-        }
-    });
+    if (auth) {
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUserData = user;
+                document.getElementById('btn-login').style.display = 'none';
+                document.getElementById('user-profile').style.display = 'flex';
+                document.getElementById('user-name').textContent = user.displayName;
+                document.getElementById('user-avatar').src = user.photoURL;
+            } else {
+                currentUserData = null;
+                document.getElementById('btn-login').style.display = 'flex';
+                document.getElementById('user-profile').style.display = 'none';
+            }
+        });
+    } else {
+        document.getElementById('btn-login').style.display = 'flex';
+        document.getElementById('user-profile').style.display = 'none';
+    }
 
     const btnLogin = document.getElementById('btn-login');
     if (btnLogin) {
         btnLogin.addEventListener('click', () => {
-            auth.signInWithPopup(googleProvider).catch(err => showToast("Giriş başarısız: " + err.message));
+            if (auth && googleProvider) {
+                auth.signInWithPopup(googleProvider).catch(err => showToast("Giriş başarısız: " + err.message));
+            } else {
+                showToast("Firebase yapılandırılmadığı için giriş özelliği yerel modda aktif değildir.");
+            }
         });
     }
 
     const btnLogout = document.getElementById('btn-logout');
     if (btnLogout) {
         btnLogout.addEventListener('click', () => {
-            auth.signOut();
+            if (auth) {
+                auth.signOut();
+            } else {
+                currentUserData = null;
+                document.getElementById('btn-login').style.display = 'flex';
+                document.getElementById('user-profile').style.display = 'none';
+            }
         });
     }
 
@@ -233,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // FIREBASE REALTIME LISTENERS
 function setupRealtimeListeners() {
-    if (!tripId) return;
+    if (!tripId || !db) return;
 
     db.ref('trips/' + tripId + '/itineraryData').on('value', (snapshot) => {
         const data = snapshot.val();
