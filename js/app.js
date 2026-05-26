@@ -1,6 +1,25 @@
 // app.js - Full Premium Flow: Search -> Ticket Booking -> Journal
 // + Collaborative Notes, Route Editing, Multi-User Simulation
 
+// ============================
+// FIREBASE REALTIME DB CONFIGURATION
+// ============================
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
+
+// Initialize Firebase
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.database();
+
 let mapInstance = null;
 let markersLayer = null;
 
@@ -17,9 +36,11 @@ let departureBoardInterval = null;
 let isCollaborator = false;
 let currentViewDay = 'all'; // Track which day tab is active
 let collabNotes = {}; // { "1": [{id, text, author, timestamp, edited}], "2": [...] }
+let tripId = null;
+let isSyncing = false; // Prevent loop during remote updates
 
 // ============================
-// LOCALSTORAGE PERSISTENCE LAYER
+// LOCALSTORAGE & FIREBASE PERSISTENCE LAYER
 // ============================
 const LS_KEYS = {
     ITINERARY: 'thy_route_itinerary',
@@ -30,12 +51,22 @@ const LS_KEYS = {
 };
 
 function saveItineraryToStorage() {
+    if (isSyncing) return;
     try {
         localStorage.setItem(LS_KEYS.ITINERARY, JSON.stringify(currentItinerary));
         localStorage.setItem(LS_KEYS.DEST, currentDest);
         localStorage.setItem(LS_KEYS.ORIGIN, currentOrigin);
         localStorage.setItem(LS_KEYS.DAYS, totalPlannedDays.toString());
-    } catch(e) { console.warn('localStorage kaydetme hatası:', e); }
+        
+        if (tripId) {
+            db.ref('trips/' + tripId + '/itineraryData').set({
+                itinerary: currentItinerary,
+                dest: currentDest,
+                origin: currentOrigin,
+                days: totalPlannedDays
+            });
+        }
+    } catch(e) { console.warn('localStorage/Firebase kaydetme hatası:', e); }
 }
 
 function loadItineraryFromStorage() {
@@ -53,9 +84,13 @@ function loadItineraryFromStorage() {
 }
 
 function saveNotesToStorage() {
+    if (isSyncing) return;
     try {
         localStorage.setItem(LS_KEYS.NOTES, JSON.stringify(collabNotes));
-    } catch(e) { console.warn('Not kaydetme hatası:', e); }
+        if (tripId) {
+            db.ref('trips/' + tripId + '/notesData').set(collabNotes);
+        }
+    } catch(e) { console.warn('Not/Firebase kaydetme hatası:', e); }
 }
 
 function loadNotesFromStorage() {
@@ -91,13 +126,24 @@ function formatNoteTime(ts) {
 // DOMContentLoaded - INIT
 // ============================
 document.addEventListener('DOMContentLoaded', () => {
-    // Check for ?join=true in URL to show online indicator + enable collab
+    // Check for ?join=true and ?tripId in URL
     const urlParams = new URLSearchParams(window.location.search);
+    tripId = urlParams.get('tripId');
+    if (!tripId) {
+        tripId = 'trip_' + Math.random().toString(36).substr(2, 9);
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.set('tripId', tripId);
+        window.history.replaceState(null, '', newUrl.toString());
+    }
+
     if(urlParams.get('join') === 'true') {
         isCollaborator = true;
         const indicator = document.getElementById('online-indicator');
         if(indicator) indicator.style.display = 'block';
     }
+
+    // Setup Firebase Realtime Listeners
+    setupRealtimeListeners();
 
     // Load saved notes
     loadNotesFromStorage();
@@ -145,6 +191,56 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+
+// FIREBASE REALTIME LISTENERS
+function setupRealtimeListeners() {
+    if (!tripId) return;
+
+    db.ref('trips/' + tripId + '/itineraryData').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data && data.itinerary) {
+            isSyncing = true;
+            currentItinerary = data.itinerary;
+            currentDest = data.dest || currentDest;
+            currentOrigin = data.origin || currentOrigin;
+            totalPlannedDays = data.days || totalPlannedDays;
+            
+            // Only re-render if journal is active
+            if (document.getElementById('journal-sidebar').classList.contains('active')) {
+                renderDaysTabs();
+                renderJournalDay(currentViewDay);
+            }
+            isSyncing = false;
+        }
+    });
+
+    db.ref('trips/' + tripId + '/notesData').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            isSyncing = true;
+            collabNotes = data;
+            
+            // Only update notes if journal is active
+            if (document.getElementById('journal-sidebar').classList.contains('active')) {
+                // Update notes lists without destroying input focus by rendering all day cards
+                for (let i = 1; i <= totalPlannedDays; i++) {
+                    const dayKey = String(i);
+                    const notesList = document.getElementById(`notes-list-${dayKey}`);
+                    if (notesList) {
+                        const notes = collabNotes[dayKey] || [];
+                        if (notes.length === 0) {
+                            notesList.innerHTML = `<div class="collab-notes-empty"><i class="ph ph-note-blank"></i> Henüz not eklenmedi.</div>`;
+                        } else {
+                            notesList.innerHTML = notes.map(note => buildNoteItem(note, dayKey)).join('');
+                        }
+                    }
+                    updateNoteBadge(dayKey);
+                }
+            }
+            isSyncing = false;
+        }
+    });
+}
 
 // FLUID MAP BACKGROUND (Light Theme)
 function initFluidMap() {
@@ -1107,8 +1203,8 @@ function handleInviteSubmit(e) {
     
     document.getElementById('invite-modal-premium').classList.remove('active');
     
-    // 1. Dinamik Davet Linki Oluşturma
-    const inviteLink = window.location.origin + window.location.pathname + '?join=true';
+    // 1. Dinamik Davet Linki Oluşturma (Trip ID dahil)
+    const inviteLink = window.location.origin + window.location.pathname + '?tripId=' + tripId + '&join=true';
     
     // 2. EmailJS Parametreleri
     const templateParams = {
