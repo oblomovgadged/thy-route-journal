@@ -93,10 +93,29 @@ function formatNoteTime(ts) {
 document.addEventListener('DOMContentLoaded', () => {
     // Check for ?join=true in URL to show online indicator + enable collab
     const urlParams = new URLSearchParams(window.location.search);
+    let tripParamLoaded = false;
     if(urlParams.get('join') === 'true') {
         isCollaborator = true;
         const indicator = document.getElementById('online-indicator');
         if(indicator) indicator.style.display = 'block';
+        
+        // Parse trip data from URL if present
+        const tripParam = urlParams.get('trip');
+        if (tripParam) {
+            try {
+                const decodedTrip = JSON.parse(decodeURIComponent(tripParam));
+                if (decodedTrip && decodedTrip.itinerary) {
+                    currentOrigin = decodedTrip.origin || "IST";
+                    currentDest = decodedTrip.dest || "NRT";
+                    totalPlannedDays = decodedTrip.days || 3;
+                    currentItinerary = decodedTrip.itinerary || [];
+                    saveItineraryToStorage();
+                    tripParamLoaded = true;
+                }
+            } catch (e) {
+                console.error("Failed to parse trip from URL:", e);
+            }
+        }
     }
 
     // Load saved notes
@@ -132,9 +151,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // If collaborator joins and there's saved data, auto-open journal
     if (isCollaborator) {
-        const hasData = loadItineraryFromStorage();
+        let hasData = tripParamLoaded;
+        if (!hasData) {
+            hasData = loadItineraryFromStorage();
+        }
         if (hasData && currentItinerary.length > 0) {
-            document.getElementById('search-layer').classList.add('slide-up');
+            // Hide search & flight selection layers completely
+            document.getElementById('search-layer').style.display = 'none';
+            document.getElementById('flight-selection-layer').style.display = 'none';
+            
             renderDaysTabs();
             renderJournalDay('all');
             startDepartureBoard();
@@ -1111,8 +1136,14 @@ function handleInviteSubmit(e) {
     
     document.getElementById('invite-modal-premium').classList.remove('active');
     
-    // 1. Dinamik Davet Linki Oluşturma
-    const vLink = window.location.origin + window.location.pathname + '?join=true';
+    // 1. Dinamik Davet Linki Oluşturma (Trip Verisi Dahil)
+    const secilenRotaVerileri = {
+        origin: currentOrigin,
+        dest: currentDest,
+        days: totalPlannedDays,
+        itinerary: currentItinerary
+    };
+    const vLink = window.location.origin + window.location.pathname + '?join=true&trip=' + encodeURIComponent(JSON.stringify(secilenRotaVerileri));
     
     // 2. EmailJS Parametreleri
     const templateParams = {
@@ -1139,6 +1170,16 @@ function resetToSearch() {
     document.getElementById('journal-sidebar').classList.remove('active');
     document.getElementById('flight-selection-layer').classList.remove('active');
     document.getElementById('search-layer').classList.remove('slide-up');
+    // Clear display overrides
+    document.getElementById('search-layer').style.display = '';
+    document.getElementById('flight-selection-layer').style.display = '';
+    
+    // Clean up query parameters on reset
+    if (window.location.search) {
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+    }
+    
     markersLayer.clearLayers();
     mapInstance.flyTo([41.2588, 28.7456], 3, { duration: 1 });
     stopDepartureBoard();

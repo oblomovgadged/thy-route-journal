@@ -20,6 +20,15 @@
           emailjs.init('Cwjj37r4vlqMA8F83');
        })();
     </script>
+    <!-- Query Parameter Routing Helper (Prevents Flash of Unstyled Content) -->
+    <script type="text/javascript">
+       (function() {
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.get('join') === 'true' && urlParams.get('trip')) {
+             document.write('<style>#search-layer, #flight-selection-layer { display: none !important; }</style>');
+          }
+       })();
+    </script>
 </head>
 <body>
 
