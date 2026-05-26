@@ -597,3 +597,309 @@ body {
 .avatar-new {
   animation: scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
+
+/* ============================
+   COLLABORATIVE NOTES SECTION
+   ============================ */
+.collab-notes-section {
+  margin-top: 1.25rem;
+  background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(248,250,252,0.9));
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--thy-grey-border);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.collab-notes-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, var(--thy-dark-blue), #1e293b);
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.collab-notes-header i {
+  color: var(--thy-red);
+  font-size: 1.1rem;
+}
+.collab-notes-header .note-count {
+  margin-left: auto;
+  background: rgba(255,255,255,0.15);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.collab-notes-body {
+  padding: 0.75rem 1rem;
+}
+
+/* Note Input Area */
+.collab-note-input-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.collab-note-input-group textarea {
+  flex: 1;
+  padding: 0.6rem 0.75rem;
+  border: 1.5px solid var(--thy-grey-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-primary);
+  font-size: 0.82rem;
+  resize: none;
+  min-height: 38px;
+  max-height: 80px;
+  background: white;
+  transition: var(--transition-smooth);
+  color: var(--thy-dark-blue);
+}
+.collab-note-input-group textarea:focus {
+  outline: none;
+  border-color: var(--thy-red);
+  box-shadow: 0 0 0 3px rgba(232, 25, 50, 0.08);
+}
+.collab-note-input-group textarea::placeholder {
+  color: #9ca3af;
+}
+
+.collab-note-add-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: var(--thy-red);
+  color: white;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-smooth);
+  flex-shrink: 0;
+}
+.collab-note-add-btn:hover {
+  background: #c9152b;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(232, 25, 50, 0.3);
+}
+
+/* Individual Note Item */
+.collab-note-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.6rem 0.5rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 0.4rem;
+  transition: background 0.2s ease;
+  animation: noteSlideIn 0.3s ease;
+  position: relative;
+}
+.collab-note-item:hover {
+  background: rgba(241, 245, 249, 0.8);
+}
+
+@keyframes noteSlideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.note-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+.note-avatar.avatar-bora { background: linear-gradient(135deg, var(--thy-red), #c9152b); }
+.note-avatar.avatar-ayse { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+.note-avatar.avatar-ali  { background: linear-gradient(135deg, #059669, #047857); }
+.note-avatar.avatar-guest { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
+
+.note-content {
+  flex: 1;
+  min-width: 0;
+}
+.note-author {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--thy-dark-blue);
+  margin-bottom: 2px;
+}
+.note-text {
+  font-size: 0.8rem;
+  color: #374151;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+.note-time {
+  font-size: 0.65rem;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.note-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  flex-shrink: 0;
+}
+.collab-note-item:hover .note-actions {
+  opacity: 1;
+}
+
+.note-action-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  transition: all 0.15s ease;
+}
+.note-action-btn:hover {
+  background: rgba(232, 25, 50, 0.1);
+  color: var(--thy-red);
+}
+.note-action-btn.note-edit-btn:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+/* Note Edit Mode */
+.note-edit-input {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1.5px solid var(--thy-red);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-primary);
+  font-size: 0.8rem;
+  background: white;
+  color: var(--thy-dark-blue);
+}
+.note-edit-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(232, 25, 50, 0.1);
+}
+
+.collab-notes-empty {
+  text-align: center;
+  padding: 1rem 0.5rem;
+  color: #9ca3af;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+.collab-notes-empty i {
+  display: block;
+  font-size: 1.5rem;
+  margin-bottom: 0.3rem;
+  color: #d1d5db;
+}
+
+/* ============================
+   PLACE CARD ACTION BUTTONS
+   ============================ */
+.place-card-actions {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  gap: 3px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  z-index: 5;
+}
+.premium-place-card:hover .place-card-actions {
+  opacity: 1;
+}
+
+.place-action-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--thy-grey-border);
+  background: white;
+  color: var(--thy-grey-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.place-action-btn.btn-delete:hover {
+  background: var(--thy-red);
+  color: white;
+  border-color: var(--thy-red);
+  transform: scale(1.15);
+  box-shadow: 0 3px 8px rgba(232, 25, 50, 0.3);
+}
+
+.place-action-btn.btn-move:hover {
+  background: var(--thy-dark-blue);
+  color: white;
+  border-color: var(--thy-dark-blue);
+  transform: scale(1.15);
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.3);
+}
+
+/* Card removal animation */
+.premium-place-card.removing {
+  animation: cardRemove 0.35s ease forwards;
+}
+@keyframes cardRemove {
+  0% { opacity: 1; transform: translateX(0); max-height: 200px; }
+  50% { opacity: 0.3; transform: translateX(30px); }
+  100% { opacity: 0; transform: translateX(60px); max-height: 0; margin-bottom: 0; padding: 0; overflow: hidden; }
+}
+
+/* Card move animation */
+.premium-place-card.moving {
+  animation: cardMove 0.3s ease;
+}
+@keyframes cardMove {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.97); background: #f8fafc; }
+  100% { transform: scale(1); }
+}
+
+/* Day section header in journal */
+.day-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0 0.5rem 0;
+  color: var(--thy-red);
+  font-weight: 700;
+  font-size: 0.95rem;
+  font-family: var(--font-secondary);
+}
+.day-section-header i {
+  font-size: 1rem;
+}
+.day-section-header::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--thy-red), transparent);
+}

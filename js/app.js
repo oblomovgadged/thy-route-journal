@@ -1,4 +1,5 @@
 // app.js - Full Premium Flow: Search -> Ticket Booking -> Journal
+// + Collaborative Notes, Route Editing, Multi-User Simulation
 
 let mapInstance = null;
 let markersLayer = null;
@@ -10,13 +11,96 @@ let currentItinerary = [];
 let bookingState = 'outbound';
 let departureBoardInterval = null;
 
+// ============================
+// MULTI-USER / COLLABORATION STATE
+// ============================
+let isCollaborator = false;
+let currentViewDay = 'all'; // Track which day tab is active
+let collabNotes = {}; // { "1": [{id, text, author, timestamp, edited}], "2": [...] }
+
+// ============================
+// LOCALSTORAGE PERSISTENCE LAYER
+// ============================
+const LS_KEYS = {
+    ITINERARY: 'thy_route_itinerary',
+    NOTES: 'thy_route_collab_notes',
+    DEST: 'thy_route_dest',
+    ORIGIN: 'thy_route_origin',
+    DAYS: 'thy_route_days'
+};
+
+function saveItineraryToStorage() {
+    try {
+        localStorage.setItem(LS_KEYS.ITINERARY, JSON.stringify(currentItinerary));
+        localStorage.setItem(LS_KEYS.DEST, currentDest);
+        localStorage.setItem(LS_KEYS.ORIGIN, currentOrigin);
+        localStorage.setItem(LS_KEYS.DAYS, totalPlannedDays.toString());
+    } catch(e) { console.warn('localStorage kaydetme hatası:', e); }
+}
+
+function loadItineraryFromStorage() {
+    try {
+        const data = localStorage.getItem(LS_KEYS.ITINERARY);
+        if (data) {
+            currentItinerary = JSON.parse(data);
+            currentDest = localStorage.getItem(LS_KEYS.DEST) || currentDest;
+            currentOrigin = localStorage.getItem(LS_KEYS.ORIGIN) || currentOrigin;
+            totalPlannedDays = parseInt(localStorage.getItem(LS_KEYS.DAYS)) || totalPlannedDays;
+            return true;
+        }
+    } catch(e) { console.warn('localStorage okuma hatası:', e); }
+    return false;
+}
+
+function saveNotesToStorage() {
+    try {
+        localStorage.setItem(LS_KEYS.NOTES, JSON.stringify(collabNotes));
+    } catch(e) { console.warn('Not kaydetme hatası:', e); }
+}
+
+function loadNotesFromStorage() {
+    try {
+        const data = localStorage.getItem(LS_KEYS.NOTES);
+        if (data) {
+            collabNotes = JSON.parse(data);
+            return true;
+        }
+    } catch(e) { console.warn('Not okuma hatası:', e); }
+    return false;
+}
+
+function getCurrentUser() {
+    return isCollaborator ? 'Misafir' : 'Bora';
+}
+
+function getAvatarClass(author) {
+    const map = { 'Bora': 'avatar-bora', 'Ayşe': 'avatar-ayse', 'Ali': 'avatar-ali' };
+    return map[author] || 'avatar-guest';
+}
+
+function getInitials(name) {
+    return name.substring(0, 2).toUpperCase();
+}
+
+function formatNoteTime(ts) {
+    const d = new Date(ts);
+    return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) + ' · ' + d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+}
+
+// ============================
+// DOMContentLoaded - INIT
+// ============================
 document.addEventListener('DOMContentLoaded', () => {
-    // Check for ?join=true in URL to show online indicator
+    // Check for ?join=true in URL to show online indicator + enable collab
     const urlParams = new URLSearchParams(window.location.search);
     if(urlParams.get('join') === 'true') {
+        isCollaborator = true;
         const indicator = document.getElementById('online-indicator');
         if(indicator) indicator.style.display = 'block';
     }
+
+    // Load saved notes
+    loadNotesFromStorage();
 
     // Dates
     const today = new Date();
@@ -45,6 +129,21 @@ document.addEventListener('DOMContentLoaded', () => {
         inviteModal.classList.remove('active');
     });
     document.getElementById('invite-form-premium').addEventListener('submit', handleInviteSubmit);
+
+    // If collaborator joins and there's saved data, auto-open journal
+    if (isCollaborator) {
+        const hasData = loadItineraryFromStorage();
+        if (hasData && currentItinerary.length > 0) {
+            document.getElementById('search-layer').classList.add('slide-up');
+            renderDaysTabs();
+            renderJournalDay('all');
+            startDepartureBoard();
+            setTimeout(() => {
+                document.getElementById('journal-sidebar').classList.add('active');
+                showToast('Ortak plana başarıyla katıldınız! 🎉');
+            }, 500);
+        }
+    }
 });
 
 // FLUID MAP BACKGROUND (Light Theme)
@@ -395,9 +494,12 @@ function confirmFlightBooking() {
     // Generate Itinerary
     currentItinerary = generateRouteForPort(currentDest, totalPlannedDays);
 
+    // Save to localStorage for multi-user persistence
+    saveItineraryToStorage();
+
     // Render Journal & Map Pins
     renderDaysTabs();
-    renderJournalDay(1); // Default Day 1
+    renderJournalDay('all'); // Default: all days
 
     // Start Departure Board
     startDepartureBoard();
@@ -408,7 +510,9 @@ function confirmFlightBooking() {
     }, 300);
 }
 
-// RENDERING JOURNAL
+// ============================
+// RENDERING JOURNAL (ENHANCED)
+// ============================
 function renderDaysTabs() {
     const container = document.getElementById('days-tabs-container');
     container.innerHTML = '';
@@ -420,6 +524,7 @@ function renderDaysTabs() {
     allTab.onclick = () => {
         document.querySelectorAll('.day-pill').forEach(el => el.classList.remove('active'));
         allTab.classList.add('active');
+        currentViewDay = 'all';
         renderJournalDay('all');
     };
     container.appendChild(allTab);
@@ -432,6 +537,7 @@ function renderDaysTabs() {
         dTab.onclick = () => {
             document.querySelectorAll('.day-pill').forEach(el => el.classList.remove('active'));
             dTab.classList.add('active');
+            currentViewDay = i;
             renderJournalDay(i);
         };
         container.appendChild(dTab);
@@ -439,27 +545,52 @@ function renderDaysTabs() {
 }
 
 function renderJournalDay(dayNumber) {
+    currentViewDay = dayNumber;
     const container = document.getElementById('places-container');
     container.innerHTML = '';
     let mapPlaces = [];
 
     if(dayNumber === 'all') {
         currentItinerary.forEach(d => {
-            container.innerHTML += `<h4 style="margin: 1rem 0; color:var(--thy-red);">${d.day}. Gün</h4>`;
-            d.places.forEach(p => { container.innerHTML += buildPremiumCard(p); mapPlaces.push(p); });
+            container.innerHTML += `<div class="day-section-header"><i class="ph-fill ph-calendar-blank"></i> ${d.day}. Gün</div>`;
+            d.places.forEach((p, idx) => { 
+                container.innerHTML += buildPremiumCard(p, d.day, idx, d.places.length); 
+                mapPlaces.push(p); 
+            });
         });
+        // Render notes for all days
+        renderAllDaysNotes();
     } else {
         const d = currentItinerary.find(x => x.day === dayNumber);
-        if(d) d.places.forEach(p => { container.innerHTML += buildPremiumCard(p); mapPlaces.push(p); });
+        if(d) d.places.forEach((p, idx) => { 
+            container.innerHTML += buildPremiumCard(p, dayNumber, idx, d.places.length); 
+            mapPlaces.push(p); 
+        });
+        // Render notes for specific day
+        renderCollabNotes(dayNumber);
     }
 
     renderMapPins(mapPlaces);
 }
 
-function buildPremiumCard(place) {
+// ============================
+// PREMIUM CARD WITH ACTIONS (ENHANCED)
+// ============================
+function buildPremiumCard(place, dayNumber, placeIndex, totalPlaces) {
     const starsHtml = '⭐'.repeat(Math.floor(place.rating)) + (place.rating % 1 !== 0 ? '✨' : '');
+    
+    // Action buttons HTML
+    const actionsHtml = `
+        <div class="place-card-actions">
+            ${placeIndex > 0 ? `<button class="place-action-btn btn-move" onclick="movePlaceUp(${dayNumber}, ${placeIndex})" title="Yukarı Taşı"><i class="ph-bold ph-arrow-up"></i></button>` : ''}
+            ${placeIndex < totalPlaces - 1 ? `<button class="place-action-btn btn-move" onclick="movePlaceDown(${dayNumber}, ${placeIndex})" title="Aşağı Taşı"><i class="ph-bold ph-arrow-down"></i></button>` : ''}
+            <button class="place-action-btn btn-delete" onclick="deletePlace(${dayNumber}, ${placeIndex})" title="Mekanı Sil"><i class="ph-bold ph-trash"></i></button>
+        </div>
+    `;
+
     return `
-        <div class="premium-place-card">
+        <div class="premium-place-card" id="place-card-${dayNumber}-${placeIndex}">
+            ${actionsHtml}
             <img src="${place.imageUrl}" alt="${place.name}" class="place-image">
             <div class="place-details" style="flex:1;">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
@@ -493,7 +624,315 @@ function buildPremiumCard(place) {
     `;
 }
 
-// MAP PINS RENDERING
+// ============================
+// ROUTE EDITING (DELETE / MOVE)
+// ============================
+function deletePlace(dayNumber, placeIndex) {
+    const dayData = currentItinerary.find(x => x.day === dayNumber);
+    if (!dayData || !dayData.places[placeIndex]) return;
+
+    // Animate removal
+    const cardEl = document.getElementById(`place-card-${dayNumber}-${placeIndex}`);
+    if (cardEl) {
+        cardEl.classList.add('removing');
+        setTimeout(() => {
+            // Remove from data
+            const removedPlace = dayData.places.splice(placeIndex, 1)[0];
+            saveItineraryToStorage();
+            showToast(`"${removedPlace.name}" rotadan silindi.`);
+            // Re-render current view
+            renderJournalDay(currentViewDay);
+        }, 350);
+    } else {
+        dayData.places.splice(placeIndex, 1);
+        saveItineraryToStorage();
+        renderJournalDay(currentViewDay);
+    }
+}
+
+function movePlaceUp(dayNumber, placeIndex) {
+    const dayData = currentItinerary.find(x => x.day === dayNumber);
+    if (!dayData || placeIndex <= 0) return;
+
+    // Swap
+    [dayData.places[placeIndex - 1], dayData.places[placeIndex]] = 
+    [dayData.places[placeIndex], dayData.places[placeIndex - 1]];
+
+    saveItineraryToStorage();
+    renderJournalDay(currentViewDay);
+    showToast('Mekan sıralaması güncellendi ↑');
+}
+
+function movePlaceDown(dayNumber, placeIndex) {
+    const dayData = currentItinerary.find(x => x.day === dayNumber);
+    if (!dayData || placeIndex >= dayData.places.length - 1) return;
+
+    // Swap
+    [dayData.places[placeIndex], dayData.places[placeIndex + 1]] = 
+    [dayData.places[placeIndex + 1], dayData.places[placeIndex]];
+
+    saveItineraryToStorage();
+    renderJournalDay(currentViewDay);
+    showToast('Mekan sıralaması güncellendi ↓');
+}
+
+// ============================
+// COLLABORATIVE NOTES SYSTEM
+// ============================
+function renderCollabNotes(dayNumber) {
+    const notesContainer = document.getElementById('collab-notes-container');
+    if (!notesContainer) return;
+
+    const dayKey = String(dayNumber);
+    const notes = collabNotes[dayKey] || [];
+
+    notesContainer.innerHTML = `
+        <div class="collab-notes-section">
+            <div class="collab-notes-header">
+                <i class="ph-fill ph-note-pencil"></i>
+                <span>${dayNumber}. Gün — Ortak Notlar</span>
+                <span class="note-count">${notes.length} not</span>
+            </div>
+            <div class="collab-notes-body">
+                <div class="collab-note-input-group">
+                    <textarea id="note-input-${dayKey}" placeholder="Ekip için bir not yaz..." rows="1"></textarea>
+                    <button class="collab-note-add-btn" onclick="addCollabNote(${dayNumber})" title="Not Ekle">
+                        <i class="ph-bold ph-plus"></i>
+                    </button>
+                </div>
+                <div id="notes-list-${dayKey}">
+                    ${notes.length === 0 ? `
+                        <div class="collab-notes-empty">
+                            <i class="ph ph-note-blank"></i>
+                            Henüz not eklenmedi. İlk notu sen yaz!
+                        </div>
+                    ` : notes.map(note => buildNoteItem(note, dayKey)).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Attach Enter key listener to textarea
+    const textarea = document.getElementById(`note-input-${dayKey}`);
+    if (textarea) {
+        textarea.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                addCollabNote(dayNumber);
+            }
+        });
+    }
+}
+
+function renderAllDaysNotes() {
+    const notesContainer = document.getElementById('collab-notes-container');
+    if (!notesContainer) return;
+
+    let allNotesHtml = '';
+    for (let i = 1; i <= totalPlannedDays; i++) {
+        const dayKey = String(i);
+        const notes = collabNotes[dayKey] || [];
+        allNotesHtml += `
+            <div class="collab-notes-section" style="margin-bottom: 0.75rem;">
+                <div class="collab-notes-header">
+                    <i class="ph-fill ph-note-pencil"></i>
+                    <span>${i}. Gün — Ortak Notlar</span>
+                    <span class="note-count">${notes.length} not</span>
+                </div>
+                <div class="collab-notes-body">
+                    <div class="collab-note-input-group">
+                        <textarea id="note-input-${dayKey}" placeholder="Ekip için bir not yaz..." rows="1"></textarea>
+                        <button class="collab-note-add-btn" onclick="addCollabNote(${i})" title="Not Ekle">
+                            <i class="ph-bold ph-plus"></i>
+                        </button>
+                    </div>
+                    <div id="notes-list-${dayKey}">
+                        ${notes.length === 0 ? `
+                            <div class="collab-notes-empty">
+                                <i class="ph ph-note-blank"></i>
+                                Henüz not eklenmedi.
+                            </div>
+                        ` : notes.map(note => buildNoteItem(note, dayKey)).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    notesContainer.innerHTML = allNotesHtml;
+
+    // Attach Enter key listeners
+    for (let i = 1; i <= totalPlannedDays; i++) {
+        const dayKey = String(i);
+        const textarea = document.getElementById(`note-input-${dayKey}`);
+        if (textarea) {
+            textarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    addCollabNote(i);
+                }
+            });
+        }
+    }
+}
+
+function buildNoteItem(note, dayKey) {
+    const avatarClass = getAvatarClass(note.author);
+    const initials = getInitials(note.author);
+    const timeStr = formatNoteTime(note.timestamp);
+    const editedBadge = note.edited ? ' <span style="font-size:0.6rem; color:#9ca3af;">(düzenlendi)</span>' : '';
+
+    return `
+        <div class="collab-note-item" id="note-${note.id}">
+            <div class="note-avatar ${avatarClass}">${initials}</div>
+            <div class="note-content">
+                <div class="note-author">${note.author}${editedBadge}</div>
+                <div class="note-text" id="note-text-${note.id}">${note.text}</div>
+                <div class="note-time">${timeStr}</div>
+            </div>
+            <div class="note-actions">
+                <button class="note-action-btn note-edit-btn" onclick="startEditNote('${dayKey}', '${note.id}')" title="Düzenle">
+                    <i class="ph ph-pencil-simple"></i>
+                </button>
+                <button class="note-action-btn" onclick="deleteCollabNote('${dayKey}', '${note.id}')" title="Sil">
+                    <i class="ph ph-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function addCollabNote(dayNumber) {
+    const dayKey = String(dayNumber);
+    const textarea = document.getElementById(`note-input-${dayKey}`);
+    if (!textarea) return;
+
+    const text = textarea.value.trim();
+    if (!text) return;
+
+    // Initialize array if needed
+    if (!collabNotes[dayKey]) collabNotes[dayKey] = [];
+
+    const newNote = {
+        id: 'n_' + Math.random().toString(36).substr(2, 9),
+        text: text,
+        author: getCurrentUser(),
+        timestamp: Date.now(),
+        edited: false
+    };
+
+    collabNotes[dayKey].push(newNote);
+    saveNotesToStorage();
+
+    // Clear input
+    textarea.value = '';
+
+    // Re-render notes for this day
+    const notesList = document.getElementById(`notes-list-${dayKey}`);
+    if (notesList) {
+        notesList.innerHTML = collabNotes[dayKey].map(note => buildNoteItem(note, dayKey)).join('');
+    }
+
+    // Update count
+    updateNoteCount(dayKey);
+
+    showToast(`Not eklendi — ${dayKey}. Gün`);
+}
+
+function deleteCollabNote(dayKey, noteId) {
+    if (!collabNotes[dayKey]) return;
+
+    const noteEl = document.getElementById(`note-${noteId}`);
+    if (noteEl) {
+        noteEl.style.transition = 'all 0.3s ease';
+        noteEl.style.opacity = '0';
+        noteEl.style.transform = 'translateX(20px)';
+        setTimeout(() => {
+            collabNotes[dayKey] = collabNotes[dayKey].filter(n => n.id !== noteId);
+            saveNotesToStorage();
+
+            const notesList = document.getElementById(`notes-list-${dayKey}`);
+            if (notesList) {
+                if (collabNotes[dayKey].length === 0) {
+                    notesList.innerHTML = `<div class="collab-notes-empty"><i class="ph ph-note-blank"></i>Henüz not eklenmedi.</div>`;
+                } else {
+                    notesList.innerHTML = collabNotes[dayKey].map(note => buildNoteItem(note, dayKey)).join('');
+                }
+            }
+            updateNoteCount(dayKey);
+        }, 300);
+    }
+}
+
+function startEditNote(dayKey, noteId) {
+    const notes = collabNotes[dayKey];
+    if (!notes) return;
+    const note = notes.find(n => n.id === noteId);
+    if (!note) return;
+
+    const textEl = document.getElementById(`note-text-${noteId}`);
+    if (!textEl) return;
+
+    const currentText = note.text;
+    textEl.innerHTML = `
+        <input type="text" class="note-edit-input" id="note-edit-${noteId}" value="${currentText.replace(/"/g, '&quot;')}" 
+               onkeydown="if(event.key==='Enter'){saveEditNote('${dayKey}','${noteId}');} if(event.key==='Escape'){cancelEditNote('${dayKey}','${noteId}','${currentText.replace(/'/g, "\\'")}');}">
+    `;
+    const editInput = document.getElementById(`note-edit-${noteId}`);
+    if (editInput) {
+        editInput.focus();
+        editInput.select();
+    }
+}
+
+function saveEditNote(dayKey, noteId) {
+    const editInput = document.getElementById(`note-edit-${noteId}`);
+    if (!editInput) return;
+
+    const newText = editInput.value.trim();
+    if (!newText) return;
+
+    const notes = collabNotes[dayKey];
+    if (!notes) return;
+    const note = notes.find(n => n.id === noteId);
+    if (!note) return;
+
+    note.text = newText;
+    note.edited = true;
+    saveNotesToStorage();
+
+    // Re-render
+    const notesList = document.getElementById(`notes-list-${dayKey}`);
+    if (notesList) {
+        notesList.innerHTML = collabNotes[dayKey].map(n => buildNoteItem(n, dayKey)).join('');
+    }
+
+    showToast('Not güncellendi ✏️');
+}
+
+function cancelEditNote(dayKey, noteId, originalText) {
+    const textEl = document.getElementById(`note-text-${noteId}`);
+    if (textEl) {
+        textEl.textContent = originalText;
+    }
+}
+
+function updateNoteCount(dayKey) {
+    // Find the note-count span for this day
+    const sections = document.querySelectorAll('.collab-notes-section');
+    sections.forEach(section => {
+        const header = section.querySelector('.collab-notes-header span:first-of-type');
+        if (header && header.textContent.includes(`${dayKey}. Gün`)) {
+            const countEl = section.querySelector('.note-count');
+            if (countEl) {
+                countEl.textContent = `${(collabNotes[dayKey] || []).length} not`;
+            }
+        }
+    });
+}
+
+// ============================
+// MAP PINS RENDERING (PRESERVED)
+// ============================
 const thyMarkerIcon = L.icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
