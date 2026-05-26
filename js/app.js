@@ -8,6 +8,7 @@ let currentDest = "NRT";
 let totalPlannedDays = 3;
 let currentItinerary = [];
 let bookingState = 'outbound';
+let departureBoardInterval = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     // Check for ?join=true in URL to show online indicator
@@ -281,7 +282,7 @@ function renderFlightCards(from, to, type) {
                     <h4 style="margin-bottom: 1rem; color: var(--thy-dark-blue);">Sınıf Seçimi</h4>
                     <div class="fare-tabs">
                         <!-- Eco Fly -->
-                        <div class="fare-card eco-fly" onclick="selectFlightOption('${type}')">
+                        <div class="fare-card eco-fly">
                             <div class="fare-header">
                                 <h5>Eco Fly</h5>
                             </div>
@@ -294,10 +295,13 @@ function renderFlightCards(from, to, type) {
                                 <li><i class="ph ph-x" style="color:var(--thy-red);"></i> Değişiklik/İade</li>
                             </ul>
                             <div class="fare-miles">+${f.miles.ecoFly} Mil</div>
+                            <button class="fare-select-btn" onclick="selectFlightOption('${type}')">
+                                <i class="ph ph-check-circle"></i> Seç
+                            </button>
                         </div>
 
                         <!-- ExtraFly -->
-                        <div class="fare-card extra-fly" onclick="selectFlightOption('${type}')">
+                        <div class="fare-card extra-fly">
                             <div class="fare-header">
                                 <h5>ExtraFly</h5>
                             </div>
@@ -310,10 +314,13 @@ function renderFlightCards(from, to, type) {
                                 <li><i class="ph ph-x" style="color:var(--thy-red);"></i> Değişiklik/İade</li>
                             </ul>
                             <div class="fare-miles">+${f.miles.extraFly} Mil</div>
+                            <button class="fare-select-btn" onclick="selectFlightOption('${type}')">
+                                <i class="ph ph-check-circle"></i> Seç
+                            </button>
                         </div>
 
                         <!-- Business -->
-                        <div class="fare-card business-fly" onclick="selectFlightOption('${type}')">
+                        <div class="fare-card business-fly">
                             <div class="fare-header">
                                 <h5>Business</h5>
                             </div>
@@ -326,6 +333,9 @@ function renderFlightCards(from, to, type) {
                                 <li><i class="ph ph-check"></i> Ücretsiz Değişiklik/İade</li>
                             </ul>
                             <div class="fare-miles">+${f.miles.business} Mil</div>
+                            <button class="fare-select-btn" onclick="selectFlightOption('${type}')">
+                                <i class="ph ph-crown"></i> Seç
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -388,6 +398,9 @@ function confirmFlightBooking() {
     // Render Journal & Map Pins
     renderDaysTabs();
     renderJournalDay(1); // Default Day 1
+
+    // Start Departure Board
+    startDepartureBoard();
 
     // Slide in sidebar
     setTimeout(() => {
@@ -595,6 +608,7 @@ function resetToSearch() {
     document.getElementById('search-layer').classList.remove('slide-up');
     markersLayer.clearLayers();
     mapInstance.flyTo([41.2588, 28.7456], 3, { duration: 1 });
+    stopDepartureBoard();
 }
 
 function showToast(msg) {
@@ -602,4 +616,76 @@ function showToast(msg) {
     document.getElementById('toast-message').textContent = msg;
     toast.style.bottom = '2rem';
     setTimeout(() => toast.style.bottom = '-100px', 4000);
+}
+
+// ============================
+// LIVE DEPARTURE BOARD ENGINE
+// ============================
+const BOARD_STATUSES = [
+    { text: 'Biniş Başladı', css: 'status-boarding' },
+    { text: 'Kapı Kapanıyor', css: 'status-gate-closing' },
+    { text: 'Son Çağrı', css: 'status-last-call' },
+    { text: 'Gecikme 15 Dk', css: 'status-delayed' },
+    { text: 'Kalkış Yaptı', css: 'status-departed' },
+    { text: 'Zamanında', css: 'status-on-time' },
+    { text: 'Kapı A12', css: 'status-boarding' },
+    { text: 'Kapı B07', css: 'status-on-time' },
+    { text: 'Gecikme 30 Dk', css: 'status-delayed' },
+    { text: 'Son Çağrı!', css: 'status-last-call' }
+];
+
+const BOARD_FLIGHTS = [
+    { no: 'TK 1982', dest: 'Tokyo' },
+    { no: 'TK 0412', dest: 'Berlin' },
+    { no: 'TK 0721', dest: 'New York' },
+    { no: 'TK 1852', dest: 'Londra' },
+    { no: 'TK 0034', dest: 'Paris' },
+    { no: 'TK 2164', dest: 'Dubai' },
+    { no: 'TK 1792', dest: 'Roma' },
+    { no: 'TK 0068', dest: 'Amsterdam' },
+    { no: 'TK 1388', dest: 'Barcelona' },
+    { no: 'TK 0070', dest: 'Münih' },
+    { no: 'TK 2098', dest: 'Doha' },
+    { no: 'TK 0016', dest: 'Chicago' },
+    { no: 'TK 0078', dest: 'Zürih' },
+    { no: 'TK 1962', dest: 'Seoul' },
+    { no: 'TK 0054', dest: 'Viyana' },
+    { no: 'TK 2580', dest: 'Singapur' },
+    { no: 'TK 0012', dest: 'Washington' },
+    { no: 'TK 0800', dest: 'Moskova' },
+    { no: 'TK 1920', dest: 'Pekin' },
+    { no: 'TK 0764', dest: 'Bangkok' }
+];
+
+let boardIndex = 0;
+
+function startDepartureBoard() {
+    stopDepartureBoard();
+    updateBoardTicker();
+    departureBoardInterval = setInterval(updateBoardTicker, 5000);
+}
+
+function stopDepartureBoard() {
+    if (departureBoardInterval) {
+        clearInterval(departureBoardInterval);
+        departureBoardInterval = null;
+    }
+}
+
+function updateBoardTicker() {
+    const ticker = document.getElementById('board-ticker');
+    if (!ticker) return;
+
+    const flight = BOARD_FLIGHTS[boardIndex % BOARD_FLIGHTS.length];
+    const status = BOARD_STATUSES[Math.floor(Math.random() * BOARD_STATUSES.length)];
+
+    ticker.innerHTML = `
+        <div class="ticker-row">
+            <span class="ticker-flight">${flight.no}</span>
+            <span class="ticker-dest">${flight.dest}</span>
+            <span class="ticker-status ${status.css}">${status.text}</span>
+        </div>
+    `;
+
+    boardIndex++;
 }

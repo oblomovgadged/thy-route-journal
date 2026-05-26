@@ -317,6 +317,170 @@ body {
   display: inline-block;
 }
 
+.fare-select-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.fare-select-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.eco-fly .fare-select-btn {
+  background: var(--thy-dark-blue);
+  color: white;
+}
+.extra-fly .fare-select-btn {
+  background: #059669;
+  color: white;
+}
+.business-fly .fare-select-btn {
+  background: linear-gradient(135deg, #92400e, #d4af37);
+  color: white;
+}
+
+/* ============================
+   LIVE DEPARTURE BOARD
+   ============================ */
+.departure-board {
+  background: linear-gradient(180deg, #0c1425 0%, #162038 100%);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  overflow: hidden;
+}
+
+.board-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.board-header i {
+  color: var(--thy-red);
+  font-size: 1rem;
+}
+
+.board-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10B981;
+  margin-left: auto;
+  animation: livePulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 6px rgba(16,185,129,0.8);
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+.board-ticker-wrapper {
+  position: relative;
+  height: 42px;
+  overflow: hidden;
+}
+
+.board-ticker {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ticker-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1.5rem;
+  height: 42px;
+  font-family: 'Courier New', 'Consolas', monospace;
+  animation: tickerFadeIn 0.5s ease;
+}
+
+@keyframes tickerFadeIn {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ticker-flight {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #facc15;
+  letter-spacing: 1px;
+  min-width: 65px;
+}
+
+.ticker-dest {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.9);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ticker-status {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.status-boarding {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.status-gate-closing {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+.status-last-call {
+  background: rgba(232, 25, 50, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(232, 25, 50, 0.3);
+  animation: statusBlink 1s ease-in-out infinite;
+}
+.status-delayed {
+  background: rgba(249, 115, 22, 0.2);
+  color: #fb923c;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
+.status-departed {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+.status-on-time {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+@keyframes statusBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 /* 5. Right Sidebar Journal Layer */
 #journal-sidebar {
   position: absolute;
