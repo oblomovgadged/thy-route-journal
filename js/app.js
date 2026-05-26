@@ -422,6 +422,12 @@ function initFluidMap() {
 
         googleLayer.addTo(mapInstance);
         markersLayer = L.featureGroup().addTo(mapInstance);
+
+        // Explicitly enable dragging, scroll wheel zoom, and double click zoom to make map fully interactive
+        if (mapInstance.dragging) mapInstance.dragging.enable();
+        if (mapInstance.scrollWheelZoom) mapInstance.scrollWheelZoom.enable();
+        if (mapInstance.doubleClickZoom) mapInstance.doubleClickZoom.enable();
+        if (mapInstance.touchZoom) mapInstance.touchZoom.enable();
     } catch (e) {
         console.error("Failed to initialize Google Maps layer: ", e);
         try {
@@ -771,6 +777,8 @@ function confirmFlightBooking() {
     
     // Hide flight layer
     document.getElementById('flight-selection-layer').classList.remove('active');
+    document.getElementById('flight-selection-layer').style.display = 'none';
+    document.getElementById('search-layer').style.display = 'none';
 
     // Generate Itinerary
     currentItinerary = generateRouteForPort(currentDest, totalPlannedDays);
@@ -1431,6 +1439,44 @@ function getBezierCurve(start, end) {
     return points;
 }
 
+// Get Category-based Custom DivIcon (Google Maps Style)
+function getPoiDivIcon(category) {
+    let color = '#3b82f6'; // default blue
+    let iconClass = 'ph-fill ph-map-pin';
+    
+    if (category === 'Kültür') {
+        color = '#b45309'; // amber/brown
+        iconClass = 'ph-fill ph-bank';
+    } else if (category === 'Sanat') {
+        color = '#a855f7'; // purple
+        iconClass = 'ph-fill ph-palette';
+    } else if (category === 'Doğa') {
+        color = '#15803d'; // green
+        iconClass = 'ph-fill ph-tree';
+    } else if (category === 'Şehir') {
+        color = '#0369a1'; // light blue
+        iconClass = 'ph-fill ph-buildings';
+    } else if (category === 'Eğlence') {
+        color = '#ea580c'; // orange
+        iconClass = 'ph-fill ph-ticket';
+    } else if (category === 'Yemek') {
+        color = '#be123c'; // rose/red
+        iconClass = 'ph-fill ph-fork-knife';
+    }
+    
+    return L.divIcon({
+        className: 'custom-poi-marker',
+        html: `
+            <div class="poi-marker-container" style="background-color: ${color};">
+                <i class="${iconClass}"></i>
+            </div>
+        `,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+        popupAnchor: [0, -12]
+    });
+}
+
 function renderMapPins(places) {
     markersLayer.clearLayers();
 
@@ -1444,30 +1490,45 @@ function renderMapPins(places) {
             // Generate day selection buttons inside the popup
             let daysButtonsHtml = '';
             for (let d = 1; d <= totalPlannedDays; d++) {
-                daysButtonsHtml += `<button onclick="window.addPoiToSpecificDay(${index}, ${d})" style="padding: 3px 6px; background: #E81932; color: white; border: none; border-radius: 4px; font-size: 0.72rem; cursor: pointer; font-weight:600; transition: background 0.2s; margin-left: 2px;">${d}. Gün</button>`;
+                daysButtonsHtml += `
+                    <button class="poi-popup-day-btn" onclick="window.addPoiToSpecificDay(${index}, ${d})">
+                        ${d}. Gün
+                    </button>
+                `;
             }
             
             const popupContent = `
-                <div style="font-family: var(--font-primary); min-width: 160px; padding: 2px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-                        <h4 style="margin: 0; color: var(--thy-dark-blue); font-size: 0.85rem; font-family: var(--font-secondary);">${s.name}</h4>
-                        <span style="color: #D4AF37; font-weight: 700; font-size: 0.75rem;">★ ${s.rating}</span>
+                <div class="thy-poi-popup-card">
+                    <div class="poi-popup-image-wrapper">
+                        <img src="${s.imageUrl}" class="poi-popup-image" alt="${s.name}">
+                        <div class="poi-popup-gradient"></div>
+                        <span class="poi-popup-rating">★ ${s.rating}</span>
                     </div>
-                    <p style="margin: 0 0 6px 0; color: var(--thy-grey-text); font-size: 0.75rem; line-height: 1.3;">${s.recommendation}</p>
-                    <div style="display: flex; gap: 4px; align-items: center; border-top: 1px solid #eee; padding-top: 6px; flex-wrap: wrap;">
-                        <span style="font-size: 0.7rem; font-weight: 700; color: var(--thy-dark-blue); margin-right: 2px;">Plana Ekle:</span>
-                        ${daysButtonsHtml}
+                    <div class="poi-popup-body">
+                        <div class="poi-popup-meta">
+                            <span class="poi-popup-category">${s.category}</span>
+                            <span class="poi-popup-duration"><i class="ph ph-clock"></i> ${s.duration}</span>
+                        </div>
+                        <h3 class="poi-popup-title">${s.name}</h3>
+                        <p class="poi-popup-desc">${s.recommendation}</p>
+                        
+                        <div class="poi-popup-action-title">
+                            <i class="ph-fill ph-sparkle" style="color: var(--thy-red);"></i> Rotaya Ekle
+                        </div>
+                        <div class="poi-popup-days-grid">
+                            ${daysButtonsHtml}
+                        </div>
                     </div>
                 </div>
             `;
             
-            L.marker(ll, { icon: thyPoiIcon, opacity: 0.7 })
+            L.marker(ll, { icon: getPoiDivIcon(s.category) })
                 .bindPopup(popupContent)
                 .bindTooltip(s.name, {
                     permanent: true,
                     direction: 'top',
                     className: 'google-maps-label',
-                    offset: [0, -10]
+                    offset: [0, -14]
                 })
                 .addTo(markersLayer);
         });

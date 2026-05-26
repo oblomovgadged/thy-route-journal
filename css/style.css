@@ -122,15 +122,20 @@ body {
   max-height: 85vh;
   z-index: 40;
   padding: 2rem;
-  display: none;
   opacity: 0;
-  transition: opacity 0.5s ease;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-#flight-selection-layer.active { display: flex; opacity: 1; }
+#flight-selection-layer.active {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+}
 
 #flight-cards-container {
   overflow-y: auto;
@@ -1216,31 +1221,221 @@ body {
   }
 }
 
-/* Google Maps Estetiğinde Kalıcı Etiketler */
+/* Google Maps Estetiğinde Kalıcı Etiketler (Chic & Minimalist) */
 .google-maps-label {
-  background-color: rgba(255, 255, 255, 0.95) !important;
-  border: 1px solid rgba(15, 23, 42, 0.18) !important;
-  border-radius: 6px !important;
-  color: var(--thy-dark-blue) !important;
-  font-family: var(--font-primary) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #334155 !important;
+  font-family: var(--font-secondary), var(--font-primary), sans-serif !important;
   font-weight: 700 !important;
-  font-size: 0.72rem !important;
-  padding: 3px 6px !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+  font-size: 0.68rem !important;
+  padding: 0 !important;
   white-space: nowrap !important;
   pointer-events: none !important;
+  text-shadow: 
+    -1.5px -1.5px 0 #ffffff,  
+     1.5px -1.5px 0 #ffffff,
+    -1.5px  1.5px 0 #ffffff,
+     1.5px  1.5px 0 #ffffff,
+     0px    0px   4px #ffffff !important;
 }
 
-.leaflet-tooltip-top.google-maps-label::before {
-  border-top-color: rgba(255, 255, 255, 0.95) !important;
+/* Hide leaflet tooltip arrows completely */
+.google-maps-label::before {
+  display: none !important;
 }
-.leaflet-tooltip-bottom.google-maps-label::before {
-  border-bottom-color: rgba(255, 255, 255, 0.95) !important;
+
+/* Premium POI Custom Circular Markers */
+.poi-marker-container {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.78rem;
+  border: 2px solid white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-.leaflet-tooltip-left.google-maps-label::before {
-  border-left-color: rgba(255, 255, 255, 0.95) !important;
+
+.poi-marker-container:hover {
+  transform: scale(1.25);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
 }
-.leaflet-tooltip-right.google-maps-label::before {
-  border-right-color: rgba(255, 255, 255, 0.95) !important;
+
+.poi-marker-container i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Premium POI Popup Card */
+.thy-poi-popup-card {
+  width: 240px;
+  background: white;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  font-family: var(--font-primary);
+}
+
+.poi-popup-image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 110px;
+  overflow: hidden;
+}
+
+.poi-popup-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.thy-poi-popup-card:hover .poi-popup-image {
+  transform: scale(1.08);
+}
+
+.poi-popup-gradient {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 50%;
+  background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+  pointer-events: none;
+}
+
+.poi-popup-rating {
+  position: absolute;
+  top: 8px; right: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #d97706; /* Amber-600 */
+  font-weight: 700;
+  font-size: 0.72rem;
+  padding: 2px 6px;
+  border-radius: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.poi-popup-body {
+  padding: 0.75rem;
+}
+
+.poi-popup-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.poi-popup-category {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--thy-red);
+  background: rgba(232, 25, 50, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.poi-popup-duration {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--thy-grey-text);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.poi-popup-title {
+  margin: 0 0 0.35rem 0;
+  color: var(--thy-dark-blue);
+  font-size: 0.95rem;
+  font-family: var(--font-secondary);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.poi-popup-desc {
+  margin: 0 0 0.75rem 0;
+  color: var(--thy-grey-text);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.poi-popup-action-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--thy-dark-blue);
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.5rem;
+}
+
+.poi-popup-days-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.poi-popup-day-btn {
+  padding: 4px 2px;
+  background: white;
+  color: var(--thy-red);
+  border: 1px solid var(--thy-red);
+  border-radius: var(--radius-sm);
+  font-size: 0.68rem;
+  cursor: pointer;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.poi-popup-day-btn:hover {
+  background: var(--thy-red);
+  color: white;
+  box-shadow: 0 2px 6px rgba(232, 25, 50, 0.2);
+}
+
+/* Customize Leaflet default popup container styling */
+.leaflet-popup-content-wrapper {
+  padding: 0 !important;
+  border-radius: var(--radius-lg) !important;
+  overflow: hidden !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  width: auto !important;
+}
+
+.leaflet-popup-close-button {
+  color: white !important;
+  font-size: 16px !important;
+  top: 6px !important;
+  right: 6px !important;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.5) !important;
+  border-radius: 50% !important;
+  width: 20px !important;
+  height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-close-button span {
+  position: relative;
+  top: -1px;
 }
 
