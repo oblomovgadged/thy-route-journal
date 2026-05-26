@@ -557,6 +557,8 @@ function renderJournalDay(dayNumber) {
                 container.innerHTML += buildPremiumCard(p, d.day, idx, d.places.length); 
                 mapPlaces.push(p); 
             });
+            // Add new place button
+            container.innerHTML += buildAddPlaceButton(d.day);
             // Inline notes accordion after each day's cards
             container.innerHTML += buildInlineNotesAccordion(d.day);
         });
@@ -566,12 +568,15 @@ function renderJournalDay(dayNumber) {
             container.innerHTML += buildPremiumCard(p, dayNumber, idx, d.places.length); 
             mapPlaces.push(p); 
         });
+        // Add new place button
+        container.innerHTML += buildAddPlaceButton(dayNumber);
         // Inline notes accordion after this day's cards
         container.innerHTML += buildInlineNotesAccordion(dayNumber);
     }
 
     renderMapPins(mapPlaces);
     attachNotesListeners();
+    attachAddPlaceListeners();
 }
 
 // ============================
@@ -667,6 +672,131 @@ function movePlaceDown(dayNumber, placeIndex) {
     saveItineraryToStorage();
     renderJournalDay(currentViewDay);
     showToast('Mekan sıralaması güncellendi ↓');
+}
+
+// ============================
+// ADD NEW PLACE
+// ============================
+function buildAddPlaceButton(dayNumber) {
+    const categories = ['Kültür', 'Doğa', 'Şehir', 'Sanat', 'Eğlence', 'Yemek'];
+    const categoryOptions = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+
+    return `
+        <div class="add-place-wrapper" id="add-place-wrapper-${dayNumber}">
+            <button class="add-place-btn" onclick="toggleAddPlaceForm(${dayNumber})" id="add-place-btn-${dayNumber}">
+                <i class="ph ph-plus-circle"></i> Yeni Yer Ekle
+            </button>
+            <div class="add-place-form" id="add-place-form-${dayNumber}">
+                <div class="add-place-form-inner">
+                    <input type="text" id="add-place-name-${dayNumber}" placeholder="Mekan adı yazınız..." autocomplete="off">
+                    <div class="add-place-form-row">
+                        <select id="add-place-cat-${dayNumber}">
+                            ${categoryOptions}
+                        </select>
+                        <button class="add-place-save-btn" onclick="saveNewPlace(${dayNumber})">
+                            <i class="ph-bold ph-check"></i> Kaydet
+                        </button>
+                        <button class="add-place-cancel-btn" onclick="toggleAddPlaceForm(${dayNumber})">
+                            <i class="ph ph-x"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function toggleAddPlaceForm(dayNumber) {
+    const form = document.getElementById(`add-place-form-${dayNumber}`);
+    const btn = document.getElementById(`add-place-btn-${dayNumber}`);
+    if (!form) return;
+
+    const isOpen = form.classList.contains('open');
+    if (isOpen) {
+        form.classList.remove('open');
+        if (btn) btn.style.display = '';
+    } else {
+        form.classList.add('open');
+        if (btn) btn.style.display = 'none';
+        // Focus input
+        const inp = document.getElementById(`add-place-name-${dayNumber}`);
+        if (inp) setTimeout(() => inp.focus(), 150);
+    }
+}
+
+function saveNewPlace(dayNumber) {
+    const nameInput = document.getElementById(`add-place-name-${dayNumber}`);
+    const catSelect = document.getElementById(`add-place-cat-${dayNumber}`);
+    if (!nameInput) return;
+
+    const placeName = nameInput.value.trim();
+    if (!placeName) {
+        nameInput.style.borderColor = 'var(--thy-red)';
+        nameInput.focus();
+        return;
+    }
+
+    const category = catSelect ? catSelect.value : 'Kültür';
+
+    // Find current destination port for coordinate reference
+    const port = ALL_PORTS.find(p => p.code === currentDest) || ALL_PORTS[0];
+
+    // Generate random nearby coordinates (simulated geocoding)
+    const latOffset = (Math.random() - 0.5) * 0.06;
+    const lngOffset = (Math.random() - 0.5) * 0.06;
+
+    const recommendations = [
+        'Kesinlikle görülmeli, harika bir deneyim!',
+        'Yerel halktan çok iyi değerlendirmeler almış.',
+        'Sosyal medyada trend olan bir konum.',
+        'Ortak planımıza eklendi, birlikte keşfedelim!',
+        'Günün en özel durağı olabilir.'
+    ];
+
+    const newPlace = {
+        name: placeName,
+        category: category,
+        duration: `${Math.floor(Math.random() * 2) + 1} Saat`,
+        coordinates: {
+            lat: port.lat + latOffset,
+            lng: port.lng + lngOffset
+        },
+        payWithMiles: Math.random() > 0.5,
+        milesCost: Math.floor(Math.random() * 10 + 5) * 100,
+        addedBy: getCurrentUser(),
+        rating: (Math.random() * 1.0 + 4.0).toFixed(1),
+        recommendation: recommendations[Math.floor(Math.random() * recommendations.length)],
+        imageUrl: `https://picsum.photos/seed/${placeName.replace(/\s/g, '')}${Date.now()}/200/200`
+    };
+
+    // Add to itinerary
+    const dayData = currentItinerary.find(x => x.day === dayNumber);
+    if (dayData) {
+        dayData.places.push(newPlace);
+    }
+
+    // Persist
+    saveItineraryToStorage();
+
+    // Re-render everything (journal + map)
+    renderJournalDay(currentViewDay);
+
+    showToast(`"${placeName}" rotaya eklendi! 📍`);
+}
+
+function attachAddPlaceListeners() {
+    // Attach Enter key to all add-place name inputs
+    for (let i = 1; i <= totalPlannedDays; i++) {
+        const inp = document.getElementById(`add-place-name-${i}`);
+        if (inp) {
+            inp.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveNewPlace(i);
+                }
+            });
+        }
+    }
 }
 
 // ============================

@@ -949,3 +949,144 @@ body {
   height: 1px;
   background: linear-gradient(90deg, var(--thy-red), transparent);
 }
+
+/* ============================
+   ADD NEW PLACE BUTTON + FORM
+   ============================ */
+.add-place-wrapper {
+  margin-bottom: 0.6rem;
+}
+
+.add-place-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  border: 1.5px dashed var(--thy-grey-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--thy-grey-text);
+  font-family: var(--font-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.add-place-btn:hover {
+  border-color: var(--thy-red);
+  color: var(--thy-red);
+  background: rgba(232, 25, 50, 0.03);
+}
+.add-place-btn i {
+  font-size: 0.9rem;
+}
+
+.add-place-form {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.25s ease, margin 0.25s ease;
+  margin-top: 0;
+}
+.add-place-form.open {
+  max-height: 200px;
+  opacity: 1;
+  margin-top: 0.4rem;
+}
+
+.add-place-form-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.6rem 0.75rem;
+  background: linear-gradient(135deg, #fafbfc, #f1f5f9);
+  border: 1px solid var(--thy-grey-border);
+  border-radius: var(--radius-md);
+}
+
+.add-place-form-inner input {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1.5px solid var(--thy-grey-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-primary);
+  font-size: 0.8rem;
+  background: white;
+  color: var(--thy-dark-blue);
+  transition: border-color 0.2s ease;
+}
+.add-place-form-inner input:focus {
+  outline: none;
+  border-color: var(--thy-red);
+  box-shadow: 0 0 0 2px rgba(232, 25, 50, 0.08);
+}
+.add-place-form-inner input::placeholder {
+  color: #9ca3af;
+}
+
+.add-place-form-row {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.add-place-form-inner select {
+  flex: 1;
+  padding: 0.4rem 0.5rem;
+  border: 1.5px solid var(--thy-grey-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-primary);
+  font-size: 0.75rem;
+  background: white;
+  color: var(--thy-dark-blue);
+  cursor: pointer;
+}
+.add-place-form-inner select:focus {
+  outline: none;
+  border-color: var(--thy-red);
+}
+
+.add-place-save-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.75rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--thy-red);
+  color: white;
+  font-family: var(--font-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.add-place-save-btn:hover {
+  background: #c9152b;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(232, 25, 50, 0.25);
+}
+
+.add-place-cancel-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--thy-grey-border);
+  border-radius: var(--radius-sm);
+  background: white;
+  color: var(--thy-grey-text);
+  font-family: var(--font-primary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.add-place-cancel-btn:hover {
+  border-color: var(--thy-dark-blue);
+  color: var(--thy-dark-blue);
+}
+
