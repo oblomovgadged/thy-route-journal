@@ -4,6 +4,94 @@
 let mapInstance = null;
 let markersLayer = null;
 
+// ==========================================================================
+// THY SMART DISCOVERY & RECOMMENDATIONS ENGINE (LOCAL DB)
+// ==========================================================================
+const THY_SUGGESTIONS_DB = {
+    "NRT": [
+        { name: "Shibuya Crossing", category: "Şehir", duration: "1 Saat", latOffset: 0.012, lngOffset: -0.015, recommendation: "Dünyanın en yoğun yaya geçidinde Tokyo'nun eşsiz ritmini hissedin.", rating: "4.8", imageUrl: "https://images.unsplash.com/photo-1542051841857-5f90071e7989?w=300" },
+        { name: "Tokyo Tower", category: "Kültür", duration: "2 Saat", latOffset: -0.015, lngOffset: 0.01, recommendation: "Eyfel Kulesi esintili bu muhteşem kırmızı kuleden Tokyo manzarasını izleyin.", rating: "4.7", imageUrl: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=300" },
+        { name: "Senso-ji Temple", category: "Kültür", duration: "2 Saat", latOffset: 0.032, lngOffset: 0.035, recommendation: "Asakusa'da yer alan Tokyo'nun en eski, en renkli ve tarihi Budist tapınağı.", rating: "4.9", imageUrl: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=300" }
+    ],
+    "CDG": [
+        { name: "Eyfel Kulesi", category: "Kültür", duration: "2 Saat", latOffset: -0.012, lngOffset: -0.025, recommendation: "Paris'in efsanevi demir kulesinden şehri kuşbakışı seyredin.", rating: "4.9", imageUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=300" },
+        { name: "Louvre Müzesi", category: "Sanat", duration: "3 Saat", latOffset: 0.005, lngOffset: 0.008, recommendation: "Dünyanın en büyük sanat müzesinde Mona Lisa ve binlerce şaheseri keşfedin.", rating: "4.8", imageUrl: "https://images.unsplash.com/photo-1499856871958-5b9647a640d0?w=300" },
+        { name: "Montmartre", category: "Şehir", duration: "2 Saat", latOffset: 0.025, lngOffset: 0.012, recommendation: "Ressamlar Tepesi'nde yürüyün ve görkemli Sacré-Cœur Bazilikası'nı ziyaret edin.", rating: "4.7", imageUrl: "https://images.unsplash.com/photo-1509840144525-4c55a4e32191?w=300" }
+    ],
+    "BER": [
+        { name: "Brandenburg Kapısı", category: "Kültür", duration: "1 Saat", latOffset: 0.002, lngOffset: -0.012, recommendation: "Soğuk Savaş'ın bitişinin ve Almanya'nın birleşmesinin efsanevi simgesi.", rating: "4.7", imageUrl: "https://images.unsplash.com/photo-1599946347371-68eb71b16afc?w=300" },
+        { name: "East Side Gallery", category: "Sanat", duration: "2 Saat", latOffset: -0.015, lngOffset: 0.038, recommendation: "Berlin Duvarı kalıntıları üzerindeki ünlü açık hava resim sergisi.", rating: "4.8", imageUrl: "https://images.unsplash.com/photo-1560930968-817e5a230948?w=300" },
+        { name: "Müzeler Adası", category: "Kültür", duration: "3 Saat", latOffset: 0.006, lngOffset: 0.004, recommendation: "Spree Nehri ortasındaki UNESCO korumalı adada yer alan 5 dünya çapında müze.", rating: "4.9", imageUrl: "https://images.unsplash.com/photo-1541746972996-4e0b0f43e01a?w=300" }
+    ],
+    "IST": [
+        { name: "Ayasofya-i Kebir Cami", category: "Kültür", duration: "2 Saat", latOffset: -0.034, lngOffset: -0.011, recommendation: "Dünya mimarlık tarihinin günümüze ulaşan en büyük şaheserlerinden biri.", rating: "4.9", imageUrl: "https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=300" },
+        { name: "Topkapı Sarayı", category: "Kültür", duration: "3 Saat", latOffset: -0.03, lngOffset: -0.005, recommendation: "Osmanlı padişahlarının 400 yıl boyunca devlet idare merkezi ve resmi ikametgahı.", rating: "4.8", imageUrl: "https://images.unsplash.com/photo-1605121800305-597500abb5a4?w=300" },
+        { name: "Galata Kulesi", category: "Kültür", duration: "1.5 Saat", latOffset: -0.018, lngOffset: -0.021, recommendation: "İstanbul'u ve büyüleyici Boğaz manzarasını 360 derece izleyebileceğiniz tarihi kule.", rating: "4.7", imageUrl: "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=300" }
+    ]
+};
+
+function getSuggestionsForDestination(iataCode) {
+    const code = String(iataCode).toUpperCase();
+    
+    // Find aliases like HND -> NRT, SAW -> IST to enrich data
+    let dbKey = code;
+    if (code === "HND") dbKey = "NRT";
+    if (code === "SAW") dbKey = "IST";
+    
+    if (THY_SUGGESTIONS_DB[dbKey]) {
+        return THY_SUGGESTIONS_DB[dbKey];
+    }
+    
+    // Fallback dynamic generator based on airport database
+    const port = ALL_PORTS.find(p => p.code === code) || ALL_PORTS[0];
+    const cityName = port ? port.city : code;
+    return [
+        { name: `${cityName} Tarihi Katedrali`, category: "Kültür", duration: "2 Saat", latOffset: 0.012, lngOffset: -0.015, recommendation: "Şehrin en eski dini ve mimari anıtını keşfedin.", rating: "4.6", imageUrl: `https://picsum.photos/seed/${cityName}cat/300/300` },
+        { name: `${cityName} Botanik Parkı`, category: "Doğa", duration: "1.5 Saat", latOffset: -0.015, lngOffset: 0.02, recommendation: "Şehrin göbeğinde huzurlu yeşil alanlar ve yürüyüş yolları.", rating: "4.5", imageUrl: `https://picsum.photos/seed/${cityName}park/300/300` },
+        { name: `${cityName} Modern Sanat Müzesi`, category: "Sanat", duration: "2 Saat", latOffset: 0.008, lngOffset: -0.005, recommendation: "Modern ve çağdaş sanat eserlerinin sergilendiği göz alıcı müze.", rating: "4.7", imageUrl: `https://picsum.photos/seed/${cityName}mus/300/300` }
+    ];
+}
+
+const thyPoiIcon = L.icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41], iconAnchor: [12, 41]
+});
+
+function addPoiToSpecificDay(index, dayNumber) {
+    const suggestions = getSuggestionsForDestination(currentDest);
+    const s = suggestions[index];
+    if (!s) return;
+    
+    const port = ALL_PORTS.find(p => p.code === currentDest) || ALL_PORTS[0];
+    const newPlace = {
+        name: s.name,
+        category: s.category,
+        duration: s.duration,
+        coordinates: {
+            lat: port.lat + s.latOffset,
+            lng: port.lng + s.lngOffset
+        },
+        payWithMiles: Math.random() > 0.5,
+        milesCost: Math.floor(Math.random() * 10 + 5) * 100,
+        addedBy: getCurrentUser(),
+        rating: s.rating,
+        recommendation: s.recommendation,
+        imageUrl: s.imageUrl
+    };
+    
+    const dayData = currentItinerary.find(x => x.day === dayNumber);
+    if (dayData) {
+        dayData.places.push(newPlace);
+        saveItineraryToStorage();
+        renderJournalDay(currentViewDay);
+        showToast(`"${s.name}" ${dayNumber}. Gün planına eklendi! 📍`);
+        if (mapInstance) mapInstance.closePopup();
+    }
+}
+// Export to window so Leaflet inline onclick can call it
+window.addPoiToSpecificDay = addPoiToSpecificDay;
+
 let currentOrigin = "IST";
 let currentDest = "NRT";
 let totalPlannedDays = 3;
@@ -190,6 +278,32 @@ document.addEventListener('DOMContentLoaded', () => {
     // Populate dropdown with saved trips on load
     updateSavedTripsDropdown();
 
+    // Mobile Toggle Layout Listener
+    const mobileToggleBtn = document.getElementById('btn-mobile-toggle');
+    if (mobileToggleBtn) {
+        mobileToggleBtn.addEventListener('click', () => {
+            const sidebar = document.getElementById('journal-sidebar');
+            const toggleText = document.getElementById('mobile-toggle-text');
+            if (!sidebar || !toggleText) return;
+            
+            const isMapOnly = sidebar.classList.contains('mobile-map-view');
+            if (isMapOnly) {
+                sidebar.classList.remove('mobile-map-view');
+                toggleText.innerHTML = '🗺️ Haritayı Göster';
+                showToast('Seyahat planı gösteriliyor');
+            } else {
+                sidebar.classList.add('mobile-map-view');
+                toggleText.innerHTML = '📋 Planı Göster';
+                showToast('Harita gösteriliyor');
+                if (mapInstance) {
+                    setTimeout(() => {
+                        mapInstance.invalidateSize();
+                    }, 400);
+                }
+            }
+        });
+    }
+
     // If collaborator joins and there's saved data, auto-open journal
     if (isCollaborator) {
         let hasData = tripParamLoaded;
@@ -205,6 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderJournalDay('all');
             startDepartureBoard();
             setTimeout(() => {
+                document.body.classList.add('has-active-journal');
                 document.getElementById('journal-sidebar').classList.add('active');
                 showToast('Ortak plana başarıyla katıldınız! 🎉');
                 startMultiUserSimulation();
@@ -602,6 +717,7 @@ function confirmFlightBooking() {
     startDepartureBoard();
 
     // Slide in sidebar
+    document.body.classList.add('has-active-journal');
     setTimeout(() => {
         document.getElementById('journal-sidebar').classList.add('active');
         if (isCollaborator) {
@@ -781,6 +897,14 @@ function buildAddPlaceButton(dayNumber) {
     const categories = ['Kültür', 'Doğa', 'Şehir', 'Sanat', 'Eğlence', 'Yemek'];
     const categoryOptions = categories.map(c => `<option value="${c}">${c}</option>`).join('');
 
+    const suggestions = getSuggestionsForDestination(currentDest);
+    const suggestionsHtml = suggestions.map((s, idx) => `
+        <div class="suggestion-chip" onclick="window.addSuggestedPlace(${dayNumber}, ${idx})">
+            <span class="s-name">${s.name}</span>
+            <span class="s-rating">★ ${s.rating}</span>
+        </div>
+    `).join('');
+
     return `
         <div class="add-place-wrapper" id="add-place-wrapper-${dayNumber}">
             <button class="add-place-btn" onclick="toggleAddPlaceForm(${dayNumber})" id="add-place-btn-${dayNumber}">
@@ -800,11 +924,51 @@ function buildAddPlaceButton(dayNumber) {
                             <i class="ph ph-x"></i>
                         </button>
                     </div>
+                    <div class="thy-suggestions-section">
+                        <div class="thy-suggestions-title">
+                            <i class="ph-fill ph-sparkle" style="color: var(--gold-accent);"></i> THY Önerilen Popüler Mekanlar
+                        </div>
+                        <div class="thy-suggestions-list">
+                            ${suggestionsHtml}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     `;
 }
+
+function addSuggestedPlace(dayNumber, index) {
+    const suggestions = getSuggestionsForDestination(currentDest);
+    const s = suggestions[index];
+    if (!s) return;
+    
+    const port = ALL_PORTS.find(p => p.code === currentDest) || ALL_PORTS[0];
+    const newPlace = {
+        name: s.name,
+        category: s.category,
+        duration: s.duration,
+        coordinates: {
+            lat: port.lat + s.latOffset,
+            lng: port.lng + s.lngOffset
+        },
+        payWithMiles: Math.random() > 0.5,
+        milesCost: Math.floor(Math.random() * 10 + 5) * 100,
+        addedBy: getCurrentUser(),
+        rating: s.rating,
+        recommendation: s.recommendation,
+        imageUrl: s.imageUrl
+    };
+    
+    const dayData = currentItinerary.find(x => x.day === dayNumber);
+    if (dayData) {
+        dayData.places.push(newPlace);
+        saveItineraryToStorage();
+        renderJournalDay(currentViewDay);
+        showToast(`"${s.name}" plana başarıyla eklendi! 📍`);
+    }
+}
+window.addSuggestedPlace = addSuggestedPlace;
 
 function toggleAddPlaceForm(dayNumber) {
     const form = document.getElementById(`add-place-form-${dayNumber}`);
@@ -1170,7 +1334,47 @@ function getBezierCurve(start, end) {
 
 function renderMapPins(places) {
     markersLayer.clearLayers();
-    if(places.length === 0) return;
+
+    // Draw POI markers (Google Maps like important points)
+    if (currentDest) {
+        const suggestions = getSuggestionsForDestination(currentDest);
+        const port = ALL_PORTS.find(p => p.code === currentDest) || ALL_PORTS[0];
+        suggestions.forEach((s, index) => {
+            const ll = [port.lat + s.latOffset, port.lng + s.lngOffset];
+            
+            // Generate day selection buttons inside the popup
+            let daysButtonsHtml = '';
+            for (let d = 1; d <= totalPlannedDays; d++) {
+                daysButtonsHtml += `<button onclick="window.addPoiToSpecificDay(${index}, ${d})" style="padding: 3px 6px; background: #E81932; color: white; border: none; border-radius: 4px; font-size: 0.72rem; cursor: pointer; font-weight:600; transition: background 0.2s; margin-left: 2px;">${d}. Gün</button>`;
+            }
+            
+            const popupContent = `
+                <div style="font-family: var(--font-primary); min-width: 160px; padding: 2px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                        <h4 style="margin: 0; color: var(--thy-dark-blue); font-size: 0.85rem; font-family: var(--font-secondary);">${s.name}</h4>
+                        <span style="color: #D4AF37; font-weight: 700; font-size: 0.75rem;">★ ${s.rating}</span>
+                    </div>
+                    <p style="margin: 0 0 6px 0; color: var(--thy-grey-text); font-size: 0.75rem; line-height: 1.3;">${s.recommendation}</p>
+                    <div style="display: flex; gap: 4px; align-items: center; border-top: 1px solid #eee; padding-top: 6px; flex-wrap: wrap;">
+                        <span style="font-size: 0.7rem; font-weight: 700; color: var(--thy-dark-blue); margin-right: 2px;">Plana Ekle:</span>
+                        ${daysButtonsHtml}
+                    </div>
+                </div>
+            `;
+            
+            L.marker(ll, { icon: thyPoiIcon, opacity: 0.7 })
+                .bindPopup(popupContent)
+                .addTo(markersLayer);
+        });
+    }
+
+    if(places.length === 0) {
+        if (currentDest) {
+            const port = ALL_PORTS.find(p => p.code === currentDest) || ALL_PORTS[0];
+            mapInstance.setView([port.lat, port.lng], 13);
+        }
+        return;
+    }
 
     // Lokasyonları en mantıklı / yakın sıraya sok
     const sortedPlaces = sortPlacesOptimally(places);
@@ -1339,6 +1543,7 @@ function loadSavedTripFromDropdown(tripId) {
                 startDepartureBoard();
                 
                 // Open sidebar if not already open
+                document.body.classList.add('has-active-journal');
                 document.getElementById('journal-sidebar').classList.add('active');
                 
                 // Update map fly/bounds
@@ -1372,9 +1577,15 @@ function resetToSearch() {
     activeTripId = null;
     localStorage.removeItem('thy_active_trip_id');
     
+    document.body.classList.remove('has-active-journal');
+    document.getElementById('journal-sidebar').classList.remove('mobile-map-view');
     document.getElementById('journal-sidebar').classList.remove('active');
     document.getElementById('flight-selection-layer').classList.remove('active');
     document.getElementById('search-layer').classList.remove('slide-up');
+    const toggleText = document.getElementById('mobile-toggle-text');
+    if (toggleText) {
+        toggleText.innerHTML = '🗺️ Haritayı Göster';
+    }
     // Clear display overrides
     document.getElementById('search-layer').style.display = '';
     document.getElementById('flight-selection-layer').style.display = '';
