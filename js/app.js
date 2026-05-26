@@ -557,28 +557,27 @@ function renderJournalDay(dayNumber) {
                 container.innerHTML += buildPremiumCard(p, d.day, idx, d.places.length); 
                 mapPlaces.push(p); 
             });
+            // Inline notes accordion after each day's cards
+            container.innerHTML += buildInlineNotesAccordion(d.day);
         });
-        // Render notes for all days
-        renderAllDaysNotes();
     } else {
         const d = currentItinerary.find(x => x.day === dayNumber);
         if(d) d.places.forEach((p, idx) => { 
             container.innerHTML += buildPremiumCard(p, dayNumber, idx, d.places.length); 
             mapPlaces.push(p); 
         });
-        // Render notes for specific day
-        renderCollabNotes(dayNumber);
+        // Inline notes accordion after this day's cards
+        container.innerHTML += buildInlineNotesAccordion(dayNumber);
     }
 
     renderMapPins(mapPlaces);
+    attachNotesListeners();
 }
 
 // ============================
 // PREMIUM CARD WITH ACTIONS (ENHANCED)
 // ============================
 function buildPremiumCard(place, dayNumber, placeIndex, totalPlaces) {
-    const starsHtml = '⭐'.repeat(Math.floor(place.rating)) + (place.rating % 1 !== 0 ? '✨' : '');
-    
     // Action buttons HTML
     const actionsHtml = `
         <div class="place-card-actions">
@@ -592,32 +591,26 @@ function buildPremiumCard(place, dayNumber, placeIndex, totalPlaces) {
         <div class="premium-place-card" id="place-card-${dayNumber}-${placeIndex}">
             ${actionsHtml}
             <img src="${place.imageUrl}" alt="${place.name}" class="place-image">
-            <div class="place-details" style="flex:1;">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div class="place-details">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:0.25rem;">
                     <div class="place-name">${place.name}</div>
-                    <div style="font-size:0.75rem; font-weight:600; color:var(--thy-red); background:rgba(232,25,50,0.1); padding:2px 6px; border-radius:4px;">
-                        ${place.addedBy} ekledi
+                    <div style="font-size:0.6rem; font-weight:600; color:var(--thy-red); background:rgba(232,25,50,0.08); padding:1px 5px; border-radius:3px; white-space:nowrap; flex-shrink:0;">
+                        ${place.addedBy}
                     </div>
                 </div>
-                
-                <div style="font-size:0.8rem; color:#B8860B; margin-bottom:0.5rem; font-weight:600;">
-                    ${starsHtml} <span style="color:var(--thy-grey-text); font-weight:normal;">(${place.rating} TripAdvisor)</span>
+                <div class="place-meta" style="margin-top:0.2rem;">
+                    <span style="color:#B8860B; font-weight:600; font-size:0.72rem;">★ ${place.rating}</span>
+                    <span><i class="ph ph-clock"></i> ${place.duration}</span>
+                    <span><i class="ph ph-tag"></i> ${place.category}</span>
                 </div>
-
-                <p style="font-size:0.85rem; color:var(--thy-grey-text); margin-bottom:0.75rem; line-height:1.4;">
-                    <i class="ph-fill ph-quotes" style="color:var(--thy-red);"></i> ${place.recommendation}
+                <p style="font-size:0.75rem; color:var(--thy-grey-text); margin-top:0.25rem; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+                    ${place.recommendation}
                 </p>
-
-                <div class="place-meta">
-                    <span style="background:#f1f5f9; padding:2px 6px; border-radius:4px;"><i class="ph ph-clock"></i> ${place.duration}</span>
-                    <span style="background:#f1f5f9; padding:2px 6px; border-radius:4px;"><i class="ph ph-tag"></i> ${place.category}</span>
-                </div>
-                
-                <div style="margin-top:0.75rem; display:flex; align-items:center; gap:0.5rem;">
-                    <button class="btn-miles" style="background:#10B981; color:white; border:none; padding:4px 8px; font-size:0.75rem;">
-                        <i class="ph-fill ph-plus-circle"></i> 50 Mil Kazan
+                <div style="margin-top:0.35rem; display:flex; align-items:center; gap:0.35rem;">
+                    <button class="btn-miles" style="background:#10B981; color:white; border:none; padding:2px 6px; font-size:0.65rem;">
+                        <i class="ph-fill ph-plus-circle"></i> 50 Mil
                     </button>
-                    ${place.payWithMiles ? `<button class="btn-miles"><i class="ph-fill ph-coins"></i> ${place.milesCost} Mille Giriş</button>` : ''}
+                    ${place.payWithMiles ? `<button class="btn-miles" style="padding:2px 6px; font-size:0.65rem;"><i class="ph-fill ph-coins"></i> ${place.milesCost} Mil</button>` : ''}
                 </div>
             </div>
         </div>
@@ -677,90 +670,62 @@ function movePlaceDown(dayNumber, placeIndex) {
 }
 
 // ============================
-// COLLABORATIVE NOTES SYSTEM
+// COLLABORATIVE NOTES — INLINE ACCORDION
 // ============================
-function renderCollabNotes(dayNumber) {
-    const notesContainer = document.getElementById('collab-notes-container');
-    if (!notesContainer) return;
-
+function buildInlineNotesAccordion(dayNumber) {
     const dayKey = String(dayNumber);
     const notes = collabNotes[dayKey] || [];
+    const countClass = notes.length === 0 ? 'empty' : '';
 
-    notesContainer.innerHTML = `
-        <div class="collab-notes-section">
-            <div class="collab-notes-header">
-                <i class="ph-fill ph-note-pencil"></i>
-                <span>${dayNumber}. Gün — Ortak Notlar</span>
-                <span class="note-count">${notes.length} not</span>
-            </div>
-            <div class="collab-notes-body">
-                <div class="collab-note-input-group">
-                    <textarea id="note-input-${dayKey}" placeholder="Ekip için bir not yaz..." rows="1"></textarea>
-                    <button class="collab-note-add-btn" onclick="addCollabNote(${dayNumber})" title="Not Ekle">
-                        <i class="ph-bold ph-plus"></i>
-                    </button>
-                </div>
-                <div id="notes-list-${dayKey}">
-                    ${notes.length === 0 ? `
-                        <div class="collab-notes-empty">
-                            <i class="ph ph-note-blank"></i>
-                            Henüz not eklenmedi. İlk notu sen yaz!
-                        </div>
-                    ` : notes.map(note => buildNoteItem(note, dayKey)).join('')}
-                </div>
-            </div>
-        </div>
-    `;
-
-    // Attach Enter key listener to textarea
-    const textarea = document.getElementById(`note-input-${dayKey}`);
-    if (textarea) {
-        textarea.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                addCollabNote(dayNumber);
-            }
-        });
-    }
-}
-
-function renderAllDaysNotes() {
-    const notesContainer = document.getElementById('collab-notes-container');
-    if (!notesContainer) return;
-
-    let allNotesHtml = '';
-    for (let i = 1; i <= totalPlannedDays; i++) {
-        const dayKey = String(i);
-        const notes = collabNotes[dayKey] || [];
-        allNotesHtml += `
-            <div class="collab-notes-section" style="margin-bottom: 0.75rem;">
-                <div class="collab-notes-header">
-                    <i class="ph-fill ph-note-pencil"></i>
-                    <span>${i}. Gün — Ortak Notlar</span>
-                    <span class="note-count">${notes.length} not</span>
-                </div>
-                <div class="collab-notes-body">
+    return `
+        <div class="collab-notes-section" id="notes-section-${dayKey}">
+            <button class="collab-notes-toggle" onclick="toggleNotesAccordion('${dayKey}')" id="notes-toggle-${dayKey}">
+                <i class="ph-fill ph-note-pencil" style="color:var(--thy-red); font-size:0.85rem;"></i>
+                <span>Ortak Notlar</span>
+                <i class="ph ph-caret-down toggle-icon"></i>
+                <span class="note-count-badge ${countClass}" id="note-badge-${dayKey}">${notes.length}</span>
+            </button>
+            <div class="collab-notes-body" id="notes-body-${dayKey}">
+                <div class="collab-notes-inner">
                     <div class="collab-note-input-group">
                         <textarea id="note-input-${dayKey}" placeholder="Ekip için bir not yaz..." rows="1"></textarea>
-                        <button class="collab-note-add-btn" onclick="addCollabNote(${i})" title="Not Ekle">
+                        <button class="collab-note-add-btn" onclick="addCollabNote(${dayNumber})" title="Not Ekle">
                             <i class="ph-bold ph-plus"></i>
                         </button>
                     </div>
                     <div id="notes-list-${dayKey}">
                         ${notes.length === 0 ? `
                             <div class="collab-notes-empty">
-                                <i class="ph ph-note-blank"></i>
-                                Henüz not eklenmedi.
+                                <i class="ph ph-note-blank"></i> Henüz not eklenmedi.
                             </div>
                         ` : notes.map(note => buildNoteItem(note, dayKey)).join('')}
                     </div>
                 </div>
             </div>
-        `;
-    }
-    notesContainer.innerHTML = allNotesHtml;
+        </div>
+    `;
+}
 
-    // Attach Enter key listeners
+function toggleNotesAccordion(dayKey) {
+    const toggle = document.getElementById(`notes-toggle-${dayKey}`);
+    const body = document.getElementById(`notes-body-${dayKey}`);
+    if (!toggle || !body) return;
+
+    const isOpen = body.classList.contains('open');
+    if (isOpen) {
+        body.classList.remove('open');
+        toggle.classList.remove('open');
+    } else {
+        body.classList.add('open');
+        toggle.classList.add('open');
+        // Focus textarea
+        const ta = document.getElementById(`note-input-${dayKey}`);
+        if (ta) setTimeout(() => ta.focus(), 100);
+    }
+}
+
+function attachNotesListeners() {
+    // Attach Enter key listeners to all note textareas
     for (let i = 1; i <= totalPlannedDays; i++) {
         const dayKey = String(i);
         const textarea = document.getElementById(`note-input-${dayKey}`);
@@ -832,8 +797,8 @@ function addCollabNote(dayNumber) {
         notesList.innerHTML = collabNotes[dayKey].map(note => buildNoteItem(note, dayKey)).join('');
     }
 
-    // Update count
-    updateNoteCount(dayKey);
+    // Update badge count
+    updateNoteBadge(dayKey);
 
     showToast(`Not eklendi — ${dayKey}. Gün`);
 }
@@ -858,7 +823,7 @@ function deleteCollabNote(dayKey, noteId) {
                     notesList.innerHTML = collabNotes[dayKey].map(note => buildNoteItem(note, dayKey)).join('');
                 }
             }
-            updateNoteCount(dayKey);
+            updateNoteBadge(dayKey);
         }, 300);
     }
 }
@@ -916,18 +881,13 @@ function cancelEditNote(dayKey, noteId, originalText) {
     }
 }
 
-function updateNoteCount(dayKey) {
-    // Find the note-count span for this day
-    const sections = document.querySelectorAll('.collab-notes-section');
-    sections.forEach(section => {
-        const header = section.querySelector('.collab-notes-header span:first-of-type');
-        if (header && header.textContent.includes(`${dayKey}. Gün`)) {
-            const countEl = section.querySelector('.note-count');
-            if (countEl) {
-                countEl.textContent = `${(collabNotes[dayKey] || []).length} not`;
-            }
-        }
-    });
+function updateNoteBadge(dayKey) {
+    const badge = document.getElementById(`note-badge-${dayKey}`);
+    if (badge) {
+        const count = (collabNotes[dayKey] || []).length;
+        badge.textContent = count;
+        badge.classList.toggle('empty', count === 0);
+    }
 }
 
 // ============================
