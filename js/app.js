@@ -575,10 +575,14 @@ function confirmFlightBooking() {
             tripsIndex = JSON.parse(indexData);
         }
         
-        const tripName = `${currentOrigin} ➔ ${currentDest} (${activeTripId})`;
+        const port = ALL_PORTS.find(p => p.code === currentDest) || ALL_PORTS[0];
+        const cityName = port ? port.city : currentDest;
+        const tripName = `${activeTripId} - ${cityName}`;
+        
         tripsIndex.push({
             id: activeTripId,
             name: tripName,
+            destination: cityName,
             origin: currentOrigin,
             dest: currentDest,
             days: totalPlannedDays,
@@ -1247,11 +1251,16 @@ function saveActiveTripToSavedList() {
         
         // Check if it already exists in index
         const exists = tripsIndex.some(t => t.id === activeTripId);
+        
+        const port = ALL_PORTS.find(p => p.code === currentDest) || ALL_PORTS[0];
+        const cityName = port ? port.city : currentDest;
+        const tripName = `${activeTripId} - ${cityName}`;
+        
         if (!exists) {
-            const tripName = `${currentOrigin} ➔ ${currentDest} (${activeTripId})`;
             tripsIndex.push({
                 id: activeTripId,
                 name: tripName,
+                destination: cityName,
                 origin: currentOrigin,
                 dest: currentDest,
                 days: totalPlannedDays,
@@ -1260,7 +1269,7 @@ function saveActiveTripToSavedList() {
             localStorage.setItem('thy_trips_index', JSON.stringify(tripsIndex));
         }
         
-        showToast(`"${activeTripId}" plan listesine kaydedildi! 💾`);
+        showToast(`"${activeTripId} - ${cityName}" plan listesine kaydedildi! 💾`);
         updateSavedTripsDropdown();
     } catch (e) {
         console.error("Failed to save trip to index:", e);
@@ -1281,7 +1290,11 @@ function updateSavedTripsDropdown() {
             tripsIndex.forEach(trip => {
                 const option = document.createElement('option');
                 option.value = trip.id;
-                option.textContent = trip.name;
+                
+                // Format: 'TripID - Şehir Adı' (e.g. 'THY-4815 - Tokyo')
+                const cityName = trip.destination || trip.dest || 'Bilinmeyen Şehir';
+                option.textContent = `${trip.id} - ${cityName}`;
+                
                 if (trip.id === activeTripId) {
                     option.selected = true;
                 }
