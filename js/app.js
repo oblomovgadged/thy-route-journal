@@ -17,6 +17,7 @@ let departureBoardInterval = null;
 let isCollaborator = false;
 let currentViewDay = 'all'; // Track which day tab is active
 let collabNotes = {}; // { "1": [{id, text, author, timestamp, edited}], "2": [...] }
+let activeTripId = null;
 
 // ============================
 // LOCALSTORAGE PERSISTENCE LAYER
@@ -29,12 +30,29 @@ const LS_KEYS = {
     DAYS: 'thy_route_days'
 };
 
+function generateTripId() {
+    const num = Math.floor(1000 + Math.random() * 9000);
+    return `THY-${num}`;
+}
+
 function saveItineraryToStorage() {
     try {
         localStorage.setItem(LS_KEYS.ITINERARY, JSON.stringify(currentItinerary));
         localStorage.setItem(LS_KEYS.DEST, currentDest);
         localStorage.setItem(LS_KEYS.ORIGIN, currentOrigin);
         localStorage.setItem(LS_KEYS.DAYS, totalPlannedDays.toString());
+        
+        if (activeTripId) {
+            const tripData = {
+                origin: currentOrigin,
+                dest: currentDest,
+                days: totalPlannedDays,
+                itinerary: currentItinerary,
+                notes: collabNotes
+            };
+            localStorage.setItem(activeTripId, JSON.stringify(tripData));
+            localStorage.setItem('thy_active_trip_id', activeTripId);
+        }
     } catch(e) { console.warn('localStorage kaydetme hatası:', e); }
 }
 
@@ -46,6 +64,9 @@ function loadItineraryFromStorage() {
             currentDest = localStorage.getItem(LS_KEYS.DEST) || currentDest;
             currentOrigin = localStorage.getItem(LS_KEYS.ORIGIN) || currentOrigin;
             totalPlannedDays = parseInt(localStorage.getItem(LS_KEYS.DAYS)) || totalPlannedDays;
+            
+            // Restore active trip ID if present
+            activeTripId = localStorage.getItem('thy_active_trip_id') || activeTripId;
             return true;
         }
     } catch(e) { console.warn('localStorage okuma hatası:', e); }
@@ -99,21 +120,38 @@ document.addEventListener('DOMContentLoaded', () => {
         const indicator = document.getElementById('online-indicator');
         if(indicator) indicator.style.display = 'block';
         
-        // Parse trip data from URL if present
+        // Load trip data from URL/localStorage using the trip ID
         const tripParam = urlParams.get('trip');
         if (tripParam) {
-            try {
-                const decodedTrip = JSON.parse(decodeURIComponent(tripParam));
-                if (decodedTrip && decodedTrip.itinerary) {
-                    currentOrigin = decodedTrip.origin || "IST";
-                    currentDest = decodedTrip.dest || "NRT";
-                    totalPlannedDays = decodedTrip.days || 3;
-                    currentItinerary = decodedTrip.itinerary || [];
-                    saveItineraryToStorage();
-                    tripParamLoaded = true;
+            activeTripId = tripParam;
+            const storedTripData = localStorage.getItem(tripParam);
+            if (storedTripData) {
+                try {
+                    const decodedTrip = JSON.parse(storedTripData);
+                    if (decodedTrip && decodedTrip.itinerary) {
+                        currentOrigin = decodedTrip.origin || "IST";
+                        currentDest = decodedTrip.dest || "NRT";
+                        totalPlannedDays = decodedTrip.days || 3;
+                        currentItinerary = decodedTrip.itinerary || [];
+                        if (decodedTrip.notes) {
+                            collabNotes = decodedTrip.notes;
+                            saveNotesToStorage();
+                        }
+                        saveItineraryToStorage();
+                        tripParamLoaded = true;
+                    }
+                } catch (e) {
+                    console.error("Failed to parse trip from localStorage key:", e);
                 }
-            } catch (e) {
-                console.error("Failed to parse trip from URL:", e);
+            } else {
+                // If not found in localStorage (different device/browser), generate fallback route
+                console.log("Trip data not found in local storage, generating simulated fallback itinerary.");
+                currentOrigin = "IST";
+                currentDest = "NRT"; // Default to Tokyo
+                totalPlannedDays = 3;
+                currentItinerary = generateRouteForPort(currentDest, totalPlannedDays);
+                saveItineraryToStorage();
+                tripParamLoaded = true;
             }
         }
     }
@@ -519,6 +557,9 @@ function confirmFlightBooking() {
 
     // Generate Itinerary
     currentItinerary = generateRouteForPort(currentDest, totalPlannedDays);
+
+    // Generate unique Trip ID
+    activeTripId = generateTripId();
 
     // Save to localStorage for multi-user persistence
     saveItineraryToStorage();
@@ -1136,14 +1177,14 @@ function handleInviteSubmit(e) {
     
     document.getElementById('invite-modal-premium').classList.remove('active');
     
-    // 1. Dinamik Davet Linki Oluşturma (Trip Verisi Dahil)
-    const secilenRotaVerileri = {
-        origin: currentOrigin,
-        dest: currentDest,
-        days: totalPlannedDays,
-        itinerary: currentItinerary
-    };
-    const vLink = window.location.origin + window.location.pathname + '?join=true&trip=' + encodeURIComponent(JSON.stringify(secilenRotaVerileri));
+    // Fallback if activeTripId is not set for some reason
+    if (!activeTripId) {
+        activeTripId = generateTripId();
+        saveItineraryToStorage();
+    }
+    
+    // 1. Dinamik Davet Linki Oluşturma (Trip ID Dahil)
+    const vLink = window.location.origin + window.location.pathname + '?join=true&trip=' + activeTripId;
     
     // 2. EmailJS Parametreleri
     const templateParams = {
