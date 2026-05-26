@@ -376,15 +376,66 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// FLUID MAP BACKGROUND (Light Theme)
+// FLUID MAP BACKGROUND (Google Maps Standard Theme with Fallbacks)
 function initFluidMap() {
-    mapInstance = L.map('map-bg', { zoomControl: false }).setView([41.2588, 28.7456], 3); 
-    // Ferah ve Standart Görünüm (CartoDB Voyager)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { 
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
-    }).addTo(mapInstance);
-    markersLayer = L.featureGroup().addTo(mapInstance);
+    try {
+        // Enforce all interactions explicitly to prevent map locking
+        mapInstance = L.map('map-bg', { 
+            zoomControl: false,
+            dragging: true,
+            touchZoom: true,
+            doubleClickZoom: true,
+            scrollWheelZoom: true,
+            boxZoom: true,
+            keyboard: true
+        }).setView([41.2588, 28.7456], 3); 
+
+        // Primary: Official Google Maps Vector Roadmap style tiles
+        const googleLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            attribution: '&copy; Google Maps'
+        });
+
+        // First Fallback: CartoDB Voyager if Google Maps fails
+        googleLayer.on('tileerror', function() {
+            console.warn('Google Maps tiles failed, falling back to CartoDB Voyager.');
+            mapInstance.removeLayer(googleLayer);
+            
+            const cartoLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { 
+                maxZoom: 19,
+                attribution: '&copy; CARTO &copy; OpenStreetMap'
+            });
+
+            // Second Fallback: OpenStreetMap if CartoDB Voyager fails
+            cartoLayer.on('tileerror', function() {
+                console.warn('CartoDB tiles failed, falling back to OpenStreetMap.');
+                mapInstance.removeLayer(cartoLayer);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(mapInstance);
+            });
+
+            cartoLayer.addTo(mapInstance);
+        });
+
+        googleLayer.addTo(mapInstance);
+        markersLayer = L.featureGroup().addTo(mapInstance);
+    } catch (e) {
+        console.error("Failed to initialize Google Maps layer: ", e);
+        try {
+            // Re-attempt with OpenStreetMap if initial L.map fails
+            mapInstance = L.map('map-bg', { zoomControl: false }).setView([41.2588, 28.7456], 3);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(mapInstance);
+            markersLayer = L.featureGroup().addTo(mapInstance);
+        } catch (err) {
+            console.error("Map fallback initialization failed as well: ", err);
+        }
+    }
 }
 
 // REALTIME AUTOCOMPLETE LOGIC (NO DATALIST)
