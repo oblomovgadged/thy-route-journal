@@ -1112,12 +1112,12 @@ function handleInviteSubmit(e) {
     document.getElementById('invite-modal-premium').classList.remove('active');
     
     // 1. Dinamik Davet Linki Oluşturma
-    const inviteLink = window.location.origin + window.location.pathname + '?join=true';
+    const vLink = window.location.origin + window.location.pathname + '?join=true';
     
     // 2. EmailJS Parametreleri
     const templateParams = {
         to_email: email,
-        invite_link: inviteLink,
+        invite_link: vLink,
         destination: currentDest,
         message: "THY Seyahat Rotamıza Davetlisiniz! Aşağıdaki linke tıklayarak plana canlı olarak katılabilirsiniz."
     };
