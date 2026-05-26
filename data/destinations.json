@@ -1,0 +1,117 @@
+{
+  "destinations": [
+    {
+      "id": "tokyo-01",
+      "name": "Tokyo",
+      "country": "Japonya",
+      "currency": "JPY",
+      "image": "assets/img/tokyo-bg.jpg",
+      "flightInfo": {
+        "outbound": { "flightNo": "TK50", "time": "15:20 - 08:45 (+1)" },
+        "inbound": { "flightNo": "TK51", "time": "10:35 - 17:40" },
+        "milesEarnedOnCompletion": 500
+      },
+      "hotels": [
+        {
+          "id": "h-tokyo-1",
+          "name": "Hilton Tokyo",
+          "rating": 4.8,
+          "payWithMiles": true,
+          "milesCostPerNight": 15000,
+          "coordinates": { "lat": 35.6923, "lng": 139.6926 }
+        }
+      ],
+      "itinerary": [
+        {
+          "day": 1,
+          "title": "Geleneksel ve Modern Tokyo",
+          "places": [
+            {
+              "id": "p-1",
+              "name": "Senso-ji Tapınağı",
+              "category": "Kültür",
+              "duration": "2 Saat",
+              "coordinates": { "lat": 35.7147, "lng": 139.7966 },
+              "addedBy": "Bora",
+              "payWithMiles": false
+            },
+            {
+              "id": "p-2",
+              "name": "Tokyo Skytree",
+              "category": "Manzara",
+              "duration": "1.5 Saat",
+              "coordinates": { "lat": 35.7100, "lng": 139.8107 },
+              "addedBy": "Ayşe",
+              "payWithMiles": true,
+              "milesCost": 1500
+            }
+          ]
+        },
+        {
+          "day": 2,
+          "title": "Şehir Hayatı ve Teknoloji",
+          "places": [
+            {
+              "id": "p-3",
+              "name": "Shibuya Kavşağı",
+              "category": "Şehir",
+              "duration": "1 Saat",
+              "coordinates": { "lat": 35.6595, "lng": 139.7005 },
+              "addedBy": "Bora",
+              "payWithMiles": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paris-01",
+      "name": "Paris",
+      "country": "Fransa",
+      "currency": "EUR",
+      "image": "assets/img/paris-bg.jpg",
+      "flightInfo": {
+        "outbound": { "flightNo": "TK1821", "time": "08:15 - 10:55" },
+        "inbound": { "flightNo": "TK1828", "time": "19:40 - 00:10 (+1)" },
+        "milesEarnedOnCompletion": 300
+      },
+      "hotels": [
+        {
+          "id": "h-paris-1",
+          "name": "The Peninsula Paris",
+          "rating": 4.9,
+          "payWithMiles": true,
+          "milesCostPerNight": 25000,
+          "coordinates": { "lat": 48.8715, "lng": 2.2938 }
+        }
+      ],
+      "itinerary": [
+        {
+          "day": 1,
+          "title": "Tarih ve Romantizm",
+          "places": [
+            {
+              "id": "p-4",
+              "name": "Eyfel Kulesi",
+              "category": "Simge",
+              "duration": "3 Saat",
+              "coordinates": { "lat": 48.8584, "lng": 2.2945 },
+              "addedBy": "Bora",
+              "payWithMiles": true,
+              "milesCost": 2000
+            },
+            {
+              "id": "p-5",
+              "name": "Louvre Müzesi",
+              "category": "Sanat",
+              "duration": "4 Saat",
+              "coordinates": { "lat": 48.8606, "lng": 2.3376 },
+              "addedBy": "Ali",
+              "payWithMiles": false
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

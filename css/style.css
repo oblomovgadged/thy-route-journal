@@ -1,0 +1,277 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+@import './variables.css';
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-primary);
+  background-color: #0f172a; /* Fallback */
+  color: var(--thy-dark-blue);
+  overflow: hidden; /* App-like feel */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 1. Fluid Map Background */
+#map-bg {
+  position: absolute;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  z-index: 1;
+}
+
+/* Glassmorphism Base Layer */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  border-radius: var(--radius-xl);
+}
+
+/* 2. Top Branding */
+.floating-brand {
+  position: absolute;
+  top: 1.5rem; left: 2rem;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+}
+
+.brand-logo { color: var(--thy-red); font-size: 2rem; }
+.brand-title { font-family: var(--font-secondary); font-weight: 700; font-size: 1.5rem; color: var(--thy-dark-blue); }
+
+/* 3. Search Engine Layer (Centered) */
+#search-layer {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%; max-width: 900px;
+  z-index: 50;
+  padding: 2rem;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease;
+}
+
+#search-layer.slide-up {
+  transform: translate(-50%, -150%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.search-title {
+  text-align: center;
+  font-family: var(--font-secondary);
+  font-size: 2.2rem;
+  margin-bottom: 2rem;
+  color: var(--thy-dark-blue);
+}
+
+.search-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 1rem;
+  align-items: end;
+}
+
+.input-group { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
+.input-group label { font-weight: 600; font-size: 0.9rem; color: var(--thy-grey-text); }
+.input-group input {
+  padding: 1rem;
+  border: 1px solid var(--thy-grey-border);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  background: rgba(255,255,255,0.9);
+  transition: var(--transition-smooth);
+}
+.input-group input:focus { outline: none; border-color: var(--thy-red); box-shadow: 0 0 0 3px rgba(232, 25, 50, 0.1); }
+
+/* Custom Autocomplete List */
+.autocomplete-list {
+  position: absolute;
+  top: 100%; left: 0; right: 0;
+  background: white;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 1000;
+  display: none;
+  border: 1px solid var(--thy-grey-border);
+}
+.autocomplete-list.active { display: block; }
+.autocomplete-item {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.95rem;
+}
+.autocomplete-item:hover { background: #f8fafc; color: var(--thy-red); }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 1rem 1.5rem; border-radius: var(--radius-md); font-weight: 600; cursor: pointer; transition: var(--transition-smooth); border: none; font-size: 1rem; }
+.btn-primary { background-color: var(--thy-red); color: white; }
+.btn-primary:hover { background-color: #c9152b; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(232,25,50,0.3); }
+
+/* 4. Flight Selection Layer */
+#flight-selection-layer {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%; max-width: 1000px;
+  z-index: 40;
+  padding: 2rem;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+#flight-selection-layer.active { display: block; opacity: 1; }
+
+.flights-header { margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--thy-grey-border); padding-bottom: 1rem; }
+.flights-title { font-family: var(--font-secondary); font-size: 1.8rem; }
+
+.flight-ticket-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--thy-grey-border);
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 1.5rem;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+.flight-ticket-card:hover { border-color: var(--thy-dark-blue); box-shadow: var(--shadow-md); }
+
+.flight-times { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.time-block { text-align: center; }
+.time-block h3 { font-size: 1.5rem; margin-bottom: 0.2rem; }
+.time-block p { color: var(--thy-grey-text); font-size: 0.9rem; }
+.flight-duration { flex: 1; text-align: center; border-bottom: 2px solid var(--thy-grey-border); position: relative; padding-bottom: 0.5rem; }
+.flight-duration i { position: absolute; top: 100%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 0 0.5rem; color: var(--thy-red); }
+
+.aircraft-info {
+  border-left: 1px solid var(--thy-grey-border);
+  padding-left: 1.5rem;
+}
+.aircraft-badge { background: #f1f5f9; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600; color: var(--thy-dark-blue); margin-bottom: 0.5rem; display: inline-block; }
+
+.class-options { display: flex; flex-direction: column; gap: 0.5rem; }
+.class-btn { width: 100%; display: flex; justify-content: space-between; padding: 0.75rem 1rem; border: 1px solid var(--thy-grey-border); background: white; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; transition: 0.2s; }
+.class-btn:hover { border-color: var(--thy-red); background: #fdf2f2; }
+.class-eco { color: var(--thy-dark-blue); }
+.class-bus { color: #B8860B; border-color: #D4AF37; }
+
+/* 5. Right Sidebar Journal Layer */
+#journal-sidebar {
+  position: absolute;
+  top: 0; right: -500px;
+  width: 450px; height: 100vh;
+  z-index: 60;
+  border-radius: 0;
+  border-left: 1px solid rgba(255,255,255,0.4);
+  display: flex;
+  flex-direction: column;
+  transition: right 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#journal-sidebar.active { right: 0; }
+
+.journal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--thy-grey-border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+.days-scroller {
+  display: flex; gap: 0.5rem; overflow-x: auto; padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--thy-grey-border);
+}
+.day-pill {
+  padding: 0.5rem 1rem; background: white; border: 1px solid var(--thy-grey-border);
+  border-radius: 20px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: 0.2s;
+}
+.day-pill.active { background: var(--thy-red); color: white; border-color: var(--thy-red); }
+
+.journal-content {
+  padding: 1.5rem; overflow-y: auto; flex: 1;
+}
+
+.premium-place-card {
+  display: flex; gap: 1rem; padding: 1rem; background: white;
+  border-radius: var(--radius-lg); border: 1px solid var(--thy-grey-border);
+  border-left: 4px solid var(--thy-red); margin-bottom: 1rem;
+  box-shadow: var(--shadow-sm); position: relative; align-items: flex-start;
+}
+
+.place-image {
+  width: 80px; height: 80px; border-radius: var(--radius-md);
+  object-fit: cover; border: 1px solid var(--thy-grey-border);
+}
+
+.place-details { flex: 1; }
+.place-name { font-weight: 600; color: var(--thy-dark-blue); margin-bottom: 0.25rem; font-size: 1.05rem; }
+.place-meta { font-size: 0.85rem; color: var(--thy-grey-text); display: flex; gap: 0.75rem; align-items: center; }
+
+/* Miles Button */
+.btn-miles { background-color: var(--thy-dark-blue); color: var(--gold-accent); border: 1px solid var(--gold-accent); padding: 0.25rem 0.5rem; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; font-size: 0.75rem; transition: 0.2s; }
+.btn-miles:hover { background-color: var(--gold-accent); color: var(--thy-dark-blue); transform: scale(1.05); }
+
+@media (max-width: 900px) {
+  .search-grid { grid-template-columns: 1fr; }
+  .flight-ticket-card { grid-template-columns: 1fr; }
+  #journal-sidebar { width: 100%; right: -100%; }
+}
+
+/* Modal Styling */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.modal-content {
+  background: white;
+  width: 90%;
+  max-width: 400px;
+  border-radius: var(--radius-xl);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  transform: translateY(20px);
+  transition: transform 0.3s ease;
+  overflow: hidden;
+}
+.modal-overlay.active .modal-content {
+  transform: translateY(0);
+}
+.modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--thy-grey-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-body { padding: 1.5rem; }
+.modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--thy-grey-text); }
+.modal-close:hover { color: var(--thy-red); }
+
+/* Avatar Animation */
+@keyframes scaleIn {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.avatar-new {
+  animation: scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}

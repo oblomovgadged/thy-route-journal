@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THY Route / Journal - Premium</title>
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Leaflet.js -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- EmailJS SDK -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script type="text/javascript">
+       (function(){
+          emailjs.init('Cwjj37r4vlqMA8F83');
+       })();
+    </script>
+</head>
+<body>
+
+    <!-- 1. Background Fluid Map -->
+    <div id="map-bg"></div>
+
+    <!-- 2. Branding Overlay -->
+    <div class="floating-brand glass-panel" style="border-radius: 50px;">
+        <i class="ph-fill ph-airplane-tilt brand-logo"></i>
+        <span class="brand-title" style="margin-right: 1rem;">THY Route</span>
+        <button id="btn-reset" class="btn" style="padding: 0.5rem; background: transparent;"><i class="ph ph-arrow-counter-clockwise"></i> Başa Dön</button>
+    </div>
+
+    <!-- 3. Search Engine Layer (Glassmorphism) -->
+    <div id="search-layer" class="glass-panel">
+        <h1 class="search-title">Dünyayı Keşfetmeye Hazır Mısınız?</h1>
+        <form id="search-form">
+            <div class="search-grid">
+                <!-- Origin -->
+                <div class="input-group">
+                    <label>Nereden</label>
+                    <input type="text" id="origin" placeholder="Örn: Istanbul (IST)" value="Istanbul (IST)" autocomplete="off" required>
+                    <div id="origin-autocomplete" class="autocomplete-list"></div>
+                </div>
+                <!-- Destination -->
+                <div class="input-group">
+                    <label>Nereye</label>
+                    <input type="text" id="destination" placeholder="Örn: Tokyo (NRT)" autocomplete="off" required>
+                    <div id="dest-autocomplete" class="autocomplete-list"></div>
+                </div>
+                <!-- Dates -->
+                <div class="input-group">
+                    <label>Gidiş</label>
+                    <input type="date" id="outbound-date" required>
+                </div>
+                <div class="input-group">
+                    <label>Dönüş</label>
+                    <input type="date" id="inbound-date" required>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem; font-size: 1.2rem;">
+                <i class="ph-bold ph-airplane-takeoff"></i> Uçuş Bul ve Planla
+            </button>
+        </form>
+    </div>
+
+    <!-- 4. Flight Selection Layer (B2C Booking Simulation) -->
+    <div id="flight-selection-layer" class="glass-panel">
+        <div class="flights-header">
+            <div>
+                <h2 class="flights-title" id="flight-route-title">IST <i class="ph ph-arrow-right"></i> NRT</h2>
+                <p style="color: var(--thy-grey-text);" id="flight-dates-subtitle">Tarihler yükleniyor...</p>
+            </div>
+        </div>
+
+        <div id="flight-cards-container">
+            <!-- Dinamik Uçuş Kartları Buraya Gelecek -->
+        </div>
+    </div>
+
+    <!-- 5. Right Sidebar: Travel Journal -->
+    <aside id="journal-sidebar" class="glass-panel">
+        <div class="journal-header">
+            <h2 style="font-family: var(--font-secondary); font-size: 1.4rem;">Seyahat Journal</h2>
+            <div class="invite-group" id="journal-invite-group" style="display: flex; gap: 0.5rem; align-items: center; position: relative;">
+                <span style="font-size: 0.95rem; font-weight: 600; color: var(--thy-dark-blue);">Rotaya Davet Et</span>
+                <button id="btn-open-invite" style="width: 30px; height: 30px; border-radius: 50%; background: white; border: 1px solid var(--thy-grey-border); color: var(--thy-dark-blue); display: flex; align-items:center; justify-content:center; font-size: 1rem; cursor: pointer; transition: 0.2s; box-shadow: var(--shadow-sm);" title="Davet Et">
+                    <i class="ph ph-plus"></i>
+                </button>
+                <div id="online-indicator" style="display: none; width: 10px; height: 10px; background: #10B981; border-radius: 50%; position: absolute; right: -12px; top: -2px; box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);"></div>
+            </div>
+        </div>
+        
+        <div class="days-scroller" id="days-tabs-container">
+            <!-- Tabs -->
+        </div>
+
+        <div class="journal-content" id="places-container">
+            <!-- Dinamik Mekan Kartları -->
+        </div>
+
+        <div style="padding: 1.5rem; border-top: 1px solid var(--thy-grey-border); background: rgba(255,255,255,0.9);">
+            <button id="btn-complete-route" class="btn btn-primary" style="width: 100%;">
+                <i class="ph-fill ph-check-circle"></i> Rotayı Tamamla (500 Mil)
+            </button>
+        </div>
+    </aside>
+
+    <!-- Notification Toast -->
+    <div id="toast" style="position: fixed; bottom: -100px; right: 2rem; background: var(--thy-dark-blue); color: white; padding: 1rem 1.5rem; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); transition: bottom 0.5s ease; z-index: 9999; display: flex; align-items: center;">
+        <i class="ph-fill ph-info" style="color: #10B981; font-size: 1.5rem;"></i>
+        <span id="toast-message" style="margin-left: 0.75rem;">Bildirim</span>
+    </div>
+
+    <!-- Premium Invite Modal -->
+    <div id="invite-modal-premium" class="modal-overlay">
+        <div class="modal-content" style="border-top: 5px solid var(--thy-red);">
+            <div class="modal-header">
+                <h2 style="display: flex; align-items: center; gap: 0.5rem; color: var(--thy-dark-blue); font-size: 1.25rem;">
+                    <i class="ph-fill ph-paper-plane-tilt" style="color: var(--thy-red);"></i> Arkadaşını Davet Et
+                </h2>
+                <button class="modal-close" id="btn-close-invite"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--thy-grey-text); margin-bottom: 1rem; font-size: 0.95rem;">Rota planına sevdiklerinizi ekleyin ve THY ayrıcalıklarıyla birlikte keşfedin.</p>
+                <form id="invite-form-premium">
+                    <div class="input-group" style="margin-bottom: 1.5rem;">
+                        <input type="email" id="invite-email" placeholder="E-posta Adresi" required style="width: 100%;" autocomplete="off">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        Davet Linki Gönder <i class="ph ph-paper-plane-tilt"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
