@@ -19,6 +19,10 @@ if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 const db = firebase.database();
+const auth = firebase.auth();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+let currentUserData = null;
 
 let mapInstance = null;
 let markersLayer = null;
@@ -105,6 +109,7 @@ function loadNotesFromStorage() {
 }
 
 function getCurrentUser() {
+    if (currentUserData) return currentUserData.displayName || 'Kullanıcı';
     return isCollaborator ? 'Misafir' : 'Bora';
 }
 
@@ -140,6 +145,40 @@ document.addEventListener('DOMContentLoaded', () => {
         isCollaborator = true;
         const indicator = document.getElementById('online-indicator');
         if(indicator) indicator.style.display = 'block';
+    }
+
+    // Setup Firebase Auth Listener
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            currentUserData = user;
+            document.getElementById('btn-login').style.display = 'none';
+            document.getElementById('user-profile').style.display = 'flex';
+            document.getElementById('user-name').textContent = user.displayName;
+            document.getElementById('user-avatar').src = user.photoURL;
+        } else {
+            currentUserData = null;
+            document.getElementById('btn-login').style.display = 'flex';
+            document.getElementById('user-profile').style.display = 'none';
+        }
+    });
+
+    const btnLogin = document.getElementById('btn-login');
+    if (btnLogin) {
+        btnLogin.addEventListener('click', () => {
+            auth.signInWithPopup(googleProvider).catch(err => showToast("Giriş başarısız: " + err.message));
+        });
+    }
+
+    const btnLogout = document.getElementById('btn-logout');
+    if (btnLogout) {
+        btnLogout.addEventListener('click', () => {
+            auth.signOut();
+        });
+    }
+
+    const btnDownloadPdf = document.getElementById('btn-download-pdf');
+    if (btnDownloadPdf) {
+        btnDownloadPdf.addEventListener('click', exportToPdf);
     }
 
     // Setup Firebase Realtime Listeners
@@ -1313,4 +1352,78 @@ function updateBoardTicker() {
     `;
 
     boardIndex++;
+}
+
+// ============================
+// PDF EXPORT
+// ============================
+function exportToPdf() {
+    showToast("PDF hazırlanıyor, lütfen bekleyin...");
+    
+    // Create a temporary wrapper for printing
+    const printWrapper = document.createElement('div');
+    printWrapper.style.padding = '2rem';
+    printWrapper.style.background = '#F9FAFB'; // Light grey background
+    printWrapper.style.color = '#232B38';
+    printWrapper.style.fontFamily = 'Inter, sans-serif';
+    
+    // Add THY Header
+    printWrapper.innerHTML = `
+        <div style="text-align: center; margin-bottom: 2rem; border-bottom: 2px solid #E81932; padding-bottom: 1.5rem;">
+            <i class="ph-fill ph-airplane-tilt" style="color: #E81932; font-size: 3.5rem;"></i>
+            <h1 style="color: #232B38; margin-top: 0.5rem; font-family: Outfit, sans-serif;">THY Seyahat Rotası</h1>
+            <p style="font-size: 1.2rem; color: #5F6B7C; font-weight: 500;">
+                ${currentOrigin} <i class="ph ph-arrow-right" style="vertical-align: middle;"></i> ${currentDest} 
+                <br><span style="font-size: 0.9rem; color: #9CA3AF;">${totalPlannedDays} Günlük Plan</span>
+            </p>
+        </div>
+    `;
+
+    // Clone the places container
+    const originalContainer = document.getElementById('places-container');
+    const clonedPlaces = originalContainer.cloneNode(true);
+    
+    // Cleanup for PDF (Remove buttons, inputs, headers etc.)
+    clonedPlaces.querySelectorAll('.place-card-actions').forEach(el => el.remove());
+    clonedPlaces.querySelectorAll('.add-place-wrapper').forEach(el => el.remove());
+    clonedPlaces.querySelectorAll('.collab-notes-toggle').forEach(el => el.remove());
+    clonedPlaces.querySelectorAll('.collab-note-input-group').forEach(el => el.remove());
+    clonedPlaces.querySelectorAll('.note-actions').forEach(el => el.remove());
+    clonedPlaces.querySelectorAll('.collab-notes-empty').forEach(el => el.remove());
+    
+    // Ensure notes are visible
+    clonedPlaces.querySelectorAll('.collab-notes-body').forEach(el => {
+        el.style.display = 'block';
+        el.style.maxHeight = 'none';
+        el.style.opacity = '1';
+        el.style.border = 'none';
+        el.style.background = 'transparent';
+        el.style.paddingLeft = '1rem';
+        el.style.marginTop = '1rem';
+    });
+    
+    printWrapper.appendChild(clonedPlaces);
+
+    // Provide some styling fixes for cloned cards
+    const cards = printWrapper.querySelectorAll('.premium-place-card');
+    cards.forEach(card => {
+        card.style.boxShadow = 'none';
+        card.style.border = '1px solid #E5E7EB';
+        card.style.breakInside = 'avoid'; // Prevent breaking across pages
+    });
+
+    const opt = {
+        margin:       0.5,
+        filename:     \`THY_Seyahat_Plani_\${currentDest}.pdf\`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(printWrapper).save().then(() => {
+        showToast("PDF başarıyla indirildi! 📄");
+    }).catch(err => {
+        console.error("PDF Hatası:", err);
+        showToast("PDF oluşturulurken hata oluştu.");
+    });
 }
