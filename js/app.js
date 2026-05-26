@@ -1931,3 +1931,65 @@ if ('serviceWorker' in navigator) {
             .catch(err => console.error('Service Worker registration failed:', err));
     });
 }
+
+// ============================
+// PWA INSTALL PROMPT (ANDROID)
+// ============================
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent Chrome's default mini-infobar
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    
+    // Check if user previously dismissed (7-day cooldown)
+    const dismissedAt = localStorage.getItem('thy_pwa_dismissed');
+    if (dismissedAt) {
+        const sevenDays = 7 * 24 * 60 * 60 * 1000;
+        if (Date.now() - parseInt(dismissedAt) < sevenDays) return;
+    }
+    
+    // Show custom install banner after 3 seconds
+    setTimeout(() => {
+        const banner = document.getElementById('pwa-install-banner');
+        if (banner) banner.classList.add('visible');
+    }, 3000);
+});
+
+// Install button click
+document.addEventListener('DOMContentLoaded', () => {
+    const installBtn = document.getElementById('pwa-install-btn');
+    const dismissBtn = document.getElementById('pwa-dismiss-btn');
+    const banner = document.getElementById('pwa-install-banner');
+    
+    if (installBtn) {
+        installBtn.addEventListener('click', async () => {
+            if (!deferredInstallPrompt) return;
+            
+            deferredInstallPrompt.prompt();
+            const { outcome } = await deferredInstallPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+                showToast('THY Route ana ekranınıza eklendi! ✈️');
+            }
+            
+            deferredInstallPrompt = null;
+            if (banner) banner.classList.remove('visible');
+        });
+    }
+    
+    if (dismissBtn) {
+        dismissBtn.addEventListener('click', () => {
+            if (banner) banner.classList.remove('visible');
+            localStorage.setItem('thy_pwa_dismissed', Date.now().toString());
+        });
+    }
+});
+
+// Hide install banner if app is already installed
+window.addEventListener('appinstalled', () => {
+    const banner = document.getElementById('pwa-install-banner');
+    if (banner) banner.classList.remove('visible');
+    deferredInstallPrompt = null;
+    console.log('THY Route PWA installed successfully!');
+});

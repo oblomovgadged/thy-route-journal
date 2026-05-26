@@ -1,13 +1,36 @@
 {
-  "name": "THY Route",
+  "name": "THY Route - Seyahat Planlama",
   "short_name": "THY Route",
   "description": "THY Ekosistemi Seyahat Planlama ve Journal Platformu",
   "start_url": "/index.html",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#09152C",
   "theme_color": "#E81932",
   "orientation": "portrait",
+  "lang": "tr",
+  "dir": "ltr",
+  "categories": ["travel", "lifestyle"],
+  "prefer_related_applications": false,
   "icons": [
+    {
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Turkish_Airlines_logo_2019_compact.svg/72px-Turkish_Airlines_logo_2019_compact.svg.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Turkish_Airlines_logo_2019_compact.svg/96px-Turkish_Airlines_logo_2019_compact.svg.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Turkish_Airlines_logo_2019_compact.svg/128px-Turkish_Airlines_logo_2019_compact.svg.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Turkish_Airlines_logo_2019_compact.svg/192px-Turkish_Airlines_logo_2019_compact.svg.png",
       "sizes": "192x192",
@@ -15,10 +38,25 @@
       "purpose": "any maskable"
     },
     {
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Turkish_Airlines_logo_2019_compact.svg/384px-Turkish_Airlines_logo_2019_compact.svg.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
       "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Turkish_Airlines_logo_2019_compact.svg/512px-Turkish_Airlines_logo_2019_compact.svg.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Turkish_Airlines_logo_2019_compact.svg/512px-Turkish_Airlines_logo_2019_compact.svg.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "THY Route Ana Sayfa"
     }
   ]
 }
