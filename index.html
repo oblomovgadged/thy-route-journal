@@ -101,6 +101,18 @@
                 <div id="online-indicator" style="display: none; width: 10px; height: 10px; background: #10B981; border-radius: 50%; position: absolute; right: -12px; top: -2px; box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);"></div>
             </div>
         </div>
+
+        <!-- Travel Saved Routes Manager -->
+        <div class="saved-routes-manager" style="padding: 0.75rem 1.5rem; border-bottom: 1px solid var(--thy-grey-border); background: rgba(255,255,255,0.4); display: flex; gap: 0.5rem; align-items: center; justify-content: space-between;">
+            <button id="btn-save-current-trip" class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; background: var(--thy-dark-blue); color: white; border-radius: 20px; font-weight: 600;" onclick="saveActiveTripToSavedList()">
+                <i class="ph-bold ph-floppy-disk"></i> Planı Kaydet
+            </button>
+            <div class="saved-trips-dropdown-wrapper" style="position: relative; flex: 1; max-width: 60%;">
+                <select id="saved-trips-select" style="width: 100%; padding: 0.4rem 0.8rem; font-size: 0.75rem; border-radius: 20px; border: 1px solid var(--thy-grey-border); background: white; font-family: var(--font-primary); font-weight: 600; color: var(--thy-dark-blue); cursor: pointer;" onchange="loadSavedTripFromDropdown(this.value)">
+                    <option value="">✈ Kayıtlı Rotalarım...</option>
+                </select>
+            </div>
+        </div>
         
         <!-- Live Departure Board -->
         <div id="departure-board" class="departure-board">

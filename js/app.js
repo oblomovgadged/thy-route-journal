@@ -187,6 +187,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('invite-form-premium').addEventListener('submit', handleInviteSubmit);
 
+    // Populate dropdown with saved trips on load
+    updateSavedTripsDropdown();
+
     // If collaborator joins and there's saved data, auto-open journal
     if (isCollaborator) {
         let hasData = tripParamLoaded;
@@ -563,6 +566,29 @@ function confirmFlightBooking() {
 
     // Save to localStorage for multi-user persistence
     saveItineraryToStorage();
+    
+    // Automatically register the newly created trip in the saved trips index
+    try {
+        let tripsIndex = [];
+        const indexData = localStorage.getItem('thy_trips_index');
+        if (indexData) {
+            tripsIndex = JSON.parse(indexData);
+        }
+        
+        const tripName = `${currentOrigin} ➔ ${currentDest} (${activeTripId})`;
+        tripsIndex.push({
+            id: activeTripId,
+            name: tripName,
+            origin: currentOrigin,
+            dest: currentDest,
+            days: totalPlannedDays,
+            timestamp: Date.now()
+        });
+        localStorage.setItem('thy_trips_index', JSON.stringify(tripsIndex));
+        updateSavedTripsDropdown();
+    } catch (e) {
+        console.error("Failed to auto-register new trip in index:", e);
+    }
 
     // Render Journal & Map Pins
     renderDaysTabs();
@@ -1205,9 +1231,134 @@ function handleInviteSubmit(e) {
         });
 }
 
+// MULTI-TRIP STORAGE AND MANAGEMENT
+function saveActiveTripToSavedList() {
+    if (!activeTripId) {
+        activeTripId = generateTripId();
+    }
+    saveItineraryToStorage();
+    
+    try {
+        let tripsIndex = [];
+        const indexData = localStorage.getItem('thy_trips_index');
+        if (indexData) {
+            tripsIndex = JSON.parse(indexData);
+        }
+        
+        // Check if it already exists in index
+        const exists = tripsIndex.some(t => t.id === activeTripId);
+        if (!exists) {
+            const tripName = `${currentOrigin} ➔ ${currentDest} (${activeTripId})`;
+            tripsIndex.push({
+                id: activeTripId,
+                name: tripName,
+                origin: currentOrigin,
+                dest: currentDest,
+                days: totalPlannedDays,
+                timestamp: Date.now()
+            });
+            localStorage.setItem('thy_trips_index', JSON.stringify(tripsIndex));
+        }
+        
+        showToast(`"${activeTripId}" plan listesine kaydedildi! 💾`);
+        updateSavedTripsDropdown();
+    } catch (e) {
+        console.error("Failed to save trip to index:", e);
+        showToast("Plan kaydedilirken hata oluştu.");
+    }
+}
+
+function updateSavedTripsDropdown() {
+    const select = document.getElementById('saved-trips-select');
+    if (!select) return;
+    
+    select.innerHTML = '<option value="">✈ Kayıtlı Rotalarım...</option>';
+    
+    try {
+        const indexData = localStorage.getItem('thy_trips_index');
+        if (indexData) {
+            const tripsIndex = JSON.parse(indexData);
+            tripsIndex.forEach(trip => {
+                const option = document.createElement('option');
+                option.value = trip.id;
+                option.textContent = trip.name;
+                if (trip.id === activeTripId) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        }
+    } catch (e) {
+        console.error("Failed to update saved trips dropdown:", e);
+    }
+}
+
+function loadSavedTripFromDropdown(tripId) {
+    if (!tripId) return;
+    
+    const storedTripData = localStorage.getItem(tripId);
+    if (storedTripData) {
+        try {
+            const decodedTrip = JSON.parse(storedTripData);
+            if (decodedTrip && decodedTrip.itinerary) {
+                activeTripId = tripId;
+                currentOrigin = decodedTrip.origin || "IST";
+                currentDest = decodedTrip.dest || "NRT";
+                totalPlannedDays = decodedTrip.days || 3;
+                currentItinerary = decodedTrip.itinerary || [];
+                collabNotes = decodedTrip.notes || {};
+                
+                // Save loaded trip as current active trip
+                localStorage.setItem(LS_KEYS.ITINERARY, JSON.stringify(currentItinerary));
+                localStorage.setItem(LS_KEYS.DEST, currentDest);
+                localStorage.setItem(LS_KEYS.ORIGIN, currentOrigin);
+                localStorage.setItem(LS_KEYS.DAYS, totalPlannedDays.toString());
+                localStorage.setItem(LS_KEYS.NOTES, JSON.stringify(collabNotes));
+                localStorage.setItem('thy_active_trip_id', activeTripId);
+                
+                // Hide search/ticketing layer in case we were there
+                document.getElementById('search-layer').style.display = 'none';
+                document.getElementById('flight-selection-layer').style.display = 'none';
+                
+                // Re-render UI
+                renderDaysTabs();
+                renderJournalDay('all');
+                startDepartureBoard();
+                
+                // Open sidebar if not already open
+                document.getElementById('journal-sidebar').classList.add('active');
+                
+                // Update map fly/bounds
+                if (currentItinerary.length > 0) {
+                    let allPlaces = [];
+                    currentItinerary.forEach(d => {
+                        if (d.places) allPlaces.push(...d.places);
+                    });
+                    renderMapPins(allPlaces);
+                }
+                
+                // Update URL parameters
+                const newUrl = window.location.origin + window.location.pathname + '?join=true&trip=' + activeTripId;
+                window.history.replaceState({}, document.title, newUrl);
+                
+                showToast(`"${activeTripId}" seyahati yüklendi! ✈️`);
+                updateSavedTripsDropdown();
+            }
+        } catch (e) {
+            console.error("Failed to load saved trip:", e);
+            showToast("Plan yüklenirken hata oluştu.");
+        }
+    } else {
+        showToast("Plan verisi bulunamadı.");
+    }
+}
+
 // UTILS
 function resetToSearch() {
     bookingState = 'outbound';
+    activeTripId = null;
+    localStorage.removeItem('thy_active_trip_id');
+    
     document.getElementById('journal-sidebar').classList.remove('active');
     document.getElementById('flight-selection-layer').classList.remove('active');
     document.getElementById('search-layer').classList.remove('slide-up');
@@ -1220,6 +1371,10 @@ function resetToSearch() {
         const cleanUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
     }
+    
+    // Reset dropdown selection
+    const select = document.getElementById('saved-trips-select');
+    if (select) select.value = '';
     
     markersLayer.clearLayers();
     mapInstance.flyTo([41.2588, 28.7456], 3, { duration: 1 });
