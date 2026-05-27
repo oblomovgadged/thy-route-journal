@@ -652,3 +652,6 @@ function addPoiToSpecificDay(index, dayNumber) {
     }
 }
 window.addPoiToSpecificDay = addPoiToSpecificDay;
+
+// Backward compatibility alias for legacy scripts
+window.fetchRealPOIFromOSM = fetchRealPOIFromGoogle;

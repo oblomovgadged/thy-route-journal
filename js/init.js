@@ -288,11 +288,11 @@ function handleSearchSubmit() {
         dynamicSuggestions[code] = 'loading';
         const centerLat = destPort.centerLat || destPort.lat;
         const centerLng = destPort.centerLng || destPort.lng;
-        fetchRealPOIFromOSM(centerLat, centerLng).then(pois => {
+        fetchRealPOIFromGoogle(centerLat, centerLng).then(pois => {
             dynamicSuggestions[code] = pois;
-            console.log(`Pre-fetched ${pois.length} OSM POIs for ${code}`);
+            console.log(`Pre-fetched ${pois.length} Google POIs for ${code}`);
         }).catch(err => {
-            console.error(`OSM Pre-fetch failed for ${code}:`, err);
+            console.error(`Google Pre-fetch failed for ${code}:`, err);
             dynamicSuggestions[code] = [];
         });
     }
