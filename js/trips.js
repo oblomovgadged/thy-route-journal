@@ -191,6 +191,14 @@ function resetToSearch() {
     bookingState = 'outbound';
     activeTripId = null;
     localStorage.removeItem('thy_active_trip_id');
+    localStorage.removeItem(LS_KEYS.ITINERARY);
+    localStorage.removeItem(LS_KEYS.DEST);
+    localStorage.removeItem(LS_KEYS.ORIGIN);
+    localStorage.removeItem(LS_KEYS.DAYS);
+    localStorage.removeItem(LS_KEYS.NOTES);
+    
+    currentItinerary = [];
+    collabNotes = {};
     
     document.body.classList.remove('has-active-journal');
     document.getElementById('journal-sidebar').classList.remove('mobile-map-view');
@@ -218,8 +226,15 @@ function resetToSearch() {
     const select = document.getElementById('saved-trips-select');
     if (select) select.value = '';
     
-    markersLayer.clearLayers();
-    mapInstance.flyTo([APP_CONFIG.DEFAULT_LAT, APP_CONFIG.DEFAULT_LNG], APP_CONFIG.DEFAULT_ZOOM, { duration: 1 });
+    if (markersLayer && typeof markersLayer.clearLayers === 'function') {
+        markersLayer.clearLayers();
+    } else {
+        clearAllMapObjects();
+    }
+    
+    if (mapInstance && typeof mapInstance.flyTo === 'function') {
+        mapInstance.flyTo([APP_CONFIG.DEFAULT_LAT, APP_CONFIG.DEFAULT_LNG], APP_CONFIG.DEFAULT_ZOOM, { duration: 1 });
+    }
     stopDepartureBoard();
 }
 

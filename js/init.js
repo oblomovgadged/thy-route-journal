@@ -169,20 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update saved trips dropdown
     updateSavedTripsDropdown();
 
-    // === AUTO-RESTORE ACTIVE TRIP ON PAGE LOAD ===
-    // If an active trip exists in localStorage, restore it immediately
-    if (!isJoin && loadItineraryFromStorage() && currentItinerary && currentItinerary.length > 0) {
-        document.getElementById('search-layer').style.display = 'none';
-        renderDaysTabs();
-        renderJournalDay('all');
-        startDepartureBoard();
-        document.body.classList.add('has-active-journal');
-        setTimeout(() => {
-            const sidebar = document.getElementById('journal-sidebar');
-            if (sidebar) sidebar.classList.add('active');
-        }, 300);
-    }
-
     // PWA Install Banner Actions
     const installBtn = document.getElementById('pwa-install-btn');
     const dismissBtn = document.getElementById('pwa-dismiss-btn');

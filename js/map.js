@@ -290,25 +290,50 @@ function fetchRealPOIFromGoogle(lat, lng) {
                 radius: 8000,
                 type: 'tourist_attraction'
             }, (results, status) => {
-                if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-                    const pois = results.slice(0, 15).map(place => {
-                        const mappedCat = mapGooglePlaceTypeToCategory(place.types);
-                        const photoUrl = place.photos && place.photos[0] ? place.photos[0].getUrl({ maxWidth: 300 }) : `https://picsum.photos/seed/${place.name.replace(/\s/g, '')}/300/300`;
-                        
-                        return {
-                            name: place.name,
-                            category: mappedCat,
-                            duration: `${Math.floor(Math.random() * 2) + 1.5} Saat`,
-                            lat: place.geometry.location.lat(),
-                            lng: place.geometry.location.lng(),
-                            recommendation: place.vicinity || `${place.name} bölgesini THY ayrıcalıklarıyla keşfedin.`,
-                            rating: place.rating ? place.rating.toFixed(1) : (Math.random() * 0.8 + 4.1).toFixed(1),
-                            imageUrl: photoUrl
-                        };
-                    });
-                    resolve(pois);
-                } else {
-                    console.warn("Google Nearby POI fetch failed, status:", status);
+                try {
+                    if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+                        const pois = [];
+                        for (let i = 0; i < results.length; i++) {
+                            const place = results[i];
+                            if (!place || !place.name) continue;
+                            
+                            const mappedCat = mapGooglePlaceTypeToCategory(place.types);
+                            const photoUrl = place.photos && place.photos[0] && typeof place.photos[0].getUrl === 'function'
+                                ? place.photos[0].getUrl({ maxWidth: 300 }) 
+                                : `https://picsum.photos/seed/${encodeURIComponent(place.name)}/300/300`;
+                            
+                            let placeLat = lat;
+                            let placeLng = lng;
+                            if (place.geometry && place.geometry.location) {
+                                if (typeof place.geometry.location.lat === 'function') {
+                                    placeLat = place.geometry.location.lat();
+                                    placeLng = place.geometry.location.lng();
+                                } else if (typeof place.geometry.location.lat === 'number') {
+                                    placeLat = place.geometry.location.lat;
+                                    placeLng = place.geometry.location.lng;
+                                }
+                            }
+                            
+                            pois.push({
+                                name: place.name,
+                                category: mappedCat,
+                                duration: `${Math.floor(Math.random() * 2) + 1.5} Saat`,
+                                lat: placeLat,
+                                lng: placeLng,
+                                recommendation: place.vicinity || `${place.name} bölgesini THY ayrıcalıklarıyla keşfedin.`,
+                                rating: place.rating ? Number(place.rating).toFixed(1) : (Math.random() * 0.8 + 4.1).toFixed(1),
+                                imageUrl: photoUrl
+                            });
+                            
+                            if (pois.length >= 15) break;
+                        }
+                        resolve(pois);
+                    } else {
+                        console.warn("Google Nearby POI fetch failed, status:", status);
+                        resolve([]);
+                    }
+                } catch (callbackErr) {
+                    console.error("Error inside nearbySearch callback:", callbackErr);
                     resolve([]);
                 }
             });
