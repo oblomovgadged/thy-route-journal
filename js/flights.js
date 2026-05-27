@@ -141,11 +141,9 @@ function selectFlightOption(type) {
 function confirmFlightBooking() {
     const code = String(currentDest).toUpperCase();
     if (dynamicSuggestions[code] === 'loading') {
-        showToast("Şehir detayları ve rotanız hazırlanıyor... ✈️");
-        setTimeout(() => {
-            confirmFlightBooking();
-        }, 800);
-        return;
+        // Safe fallback: if Google Places API is still loading, restricted, or disabled,
+        // use an empty array to trigger the offline fallback route generator instead of freezing the UI.
+        dynamicSuggestions[code] = [];
     }
 
     showToast("Biletleme onaylandı. Seyahat Journal'ınız hazırlanıyor!");

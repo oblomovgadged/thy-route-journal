@@ -277,40 +277,45 @@ function mapGooglePlaceTypeToCategory(types) {
 // Dynamic POI Search via google.maps.places.PlacesService
 function fetchRealPOIFromGoogle(lat, lng) {
     return new Promise((resolve) => {
-        if (typeof google === 'undefined' || !google.maps || !google.maps.places || !map) {
-            resolve([]);
-            return;
-        }
-
-        const service = new google.maps.places.PlacesService(map);
-        
-        service.nearbySearch({
-            location: new google.maps.LatLng(lat, lng),
-            radius: 8000,
-            type: 'tourist_attraction'
-        }, (results, status) => {
-            if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-                const pois = results.slice(0, 15).map(place => {
-                    const mappedCat = mapGooglePlaceTypeToCategory(place.types);
-                    const photoUrl = place.photos && place.photos[0] ? place.photos[0].getUrl({ maxWidth: 300 }) : `https://picsum.photos/seed/${place.name.replace(/\s/g, '')}/300/300`;
-                    
-                    return {
-                        name: place.name,
-                        category: mappedCat,
-                        duration: `${Math.floor(Math.random() * 2) + 1.5} Saat`,
-                        lat: place.geometry.location.lat(),
-                        lng: place.geometry.location.lng(),
-                        recommendation: place.vicinity || `${place.name} bölgesini THY ayrıcalıklarıyla keşfedin.`,
-                        rating: place.rating ? place.rating.toFixed(1) : (Math.random() * 0.8 + 4.1).toFixed(1),
-                        imageUrl: photoUrl
-                    };
-                });
-                resolve(pois);
-            } else {
-                console.warn("Google Nearby POI fetch failed, status:", status);
+        try {
+            if (typeof google === 'undefined' || !google.maps || !google.maps.places || !map) {
                 resolve([]);
+                return;
             }
-        });
+
+            const service = new google.maps.places.PlacesService(map);
+            
+            service.nearbySearch({
+                location: new google.maps.LatLng(lat, lng),
+                radius: 8000,
+                type: 'tourist_attraction'
+            }, (results, status) => {
+                if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+                    const pois = results.slice(0, 15).map(place => {
+                        const mappedCat = mapGooglePlaceTypeToCategory(place.types);
+                        const photoUrl = place.photos && place.photos[0] ? place.photos[0].getUrl({ maxWidth: 300 }) : `https://picsum.photos/seed/${place.name.replace(/\s/g, '')}/300/300`;
+                        
+                        return {
+                            name: place.name,
+                            category: mappedCat,
+                            duration: `${Math.floor(Math.random() * 2) + 1.5} Saat`,
+                            lat: place.geometry.location.lat(),
+                            lng: place.geometry.location.lng(),
+                            recommendation: place.vicinity || `${place.name} bölgesini THY ayrıcalıklarıyla keşfedin.`,
+                            rating: place.rating ? place.rating.toFixed(1) : (Math.random() * 0.8 + 4.1).toFixed(1),
+                            imageUrl: photoUrl
+                        };
+                    });
+                    resolve(pois);
+                } else {
+                    console.warn("Google Nearby POI fetch failed, status:", status);
+                    resolve([]);
+                }
+            });
+        } catch (e) {
+            console.error("Error in fetchRealPOIFromGoogle:", e);
+            resolve([]);
+        }
     });
 }
 
