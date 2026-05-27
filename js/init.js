@@ -205,22 +205,38 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================================================
 // LIVE AUTOCOMPLETE
 // ==========================================================================
+function normalizeStr(str) {
+    if (!str) return '';
+    return str.toLowerCase()
+        .replace(/ı/g, 'i')
+        .replace(/ö/g, 'o')
+        .replace(/ü/g, 'u')
+        .replace(/ş/g, 's')
+        .replace(/ç/g, 'c')
+        .replace(/ğ/g, 'g')
+        .replace(/i̇/g, 'i')
+        .trim();
+}
+
 function setupLiveAutocomplete(inputId, listId) {
     const input = document.getElementById(inputId);
     const list = document.getElementById(listId);
     if (!input || !list) return;
 
     input.addEventListener('input', function() {
-        const val = this.value.toLowerCase().trim();
+        const val = normalizeStr(this.value);
         list.innerHTML = '';
         if (val.length < 1) { list.classList.remove('active'); return; }
-        const matches = ALL_PORT_STRINGS.filter(s => s.toLowerCase().includes(val)).slice(0, 8);
+        const matches = ALL_PORT_STRINGS.filter(s => normalizeStr(s).includes(val)).slice(0, 8);
         if (matches.length === 0) { list.classList.remove('active'); return; }
         matches.forEach(m => {
             const item = document.createElement('div');
             item.className = 'autocomplete-item';
             item.textContent = m;
-            item.addEventListener('click', () => {
+            
+            // Use mousedown instead of click to prevent input blur event from closing the list before selection is registered
+            item.addEventListener('mousedown', (e) => {
+                e.preventDefault(); // Prevents input from losing focus immediately
                 input.value = m;
                 list.classList.remove('active');
             });
@@ -243,8 +259,30 @@ function handleSearchSubmit() {
     const outboundVal = document.getElementById('outbound-date').value;
     const inboundVal = document.getElementById('inbound-date').value;
 
-    const originPort = ALL_PORTS.find(p => originVal.includes(p.code) || originVal.includes(p.city));
-    const destPort = ALL_PORTS.find(p => destVal.includes(p.code) || destVal.includes(p.city));
+    const oValClean = normalizeStr(originVal);
+    const dValClean = normalizeStr(destVal);
+
+    const originPort = ALL_PORTS.find(p => {
+        const codeClean = normalizeStr(p.code);
+        const cityClean = normalizeStr(p.city);
+        return oValClean === codeClean || 
+               oValClean === cityClean || 
+               oValClean.includes(codeClean) || 
+               oValClean.includes(cityClean) ||
+               cityClean.includes(oValClean) ||
+               codeClean.includes(oValClean);
+    });
+
+    const destPort = ALL_PORTS.find(p => {
+        const codeClean = normalizeStr(p.code);
+        const cityClean = normalizeStr(p.city);
+        return dValClean === codeClean || 
+               dValClean === cityClean || 
+               dValClean.includes(codeClean) || 
+               dValClean.includes(cityClean) ||
+               cityClean.includes(dValClean) ||
+               codeClean.includes(dValClean);
+    });
 
     if (!originPort || !destPort) {
         showToast('Lütfen geçerli bir kalkış ve varış noktası seçin.');
