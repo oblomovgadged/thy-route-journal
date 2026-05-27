@@ -84,33 +84,8 @@ let activeInfoWindow = null;
 
 let dynamicSuggestions = {};
 
-// Load Google Maps API Key directly
-function loadGoogleMapsScript() {
-    return new Promise((resolve, reject) => {
-        if (typeof google !== 'undefined' && google.maps) {
-            resolve();
-            return;
-        }
-
-        const key = 'AIzaSyCTFajPJSFiTgXvDdK5AKp6aMwjrRRGhCg';
-
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&callback=initMap`;
-        script.async = true;
-        script.defer = true;
-        script.onerror = (e) => {
-            reject(new Error('Google Maps script failed to load.'));
-        };
-
-        // Hook script global callback to initialize
-        window.initMap = () => {
-            setupMap();
-            resolve();
-        };
-
-        document.head.appendChild(script);
-    });
-}
+// Map initialization entry hook
+window.setupMap = setupMap;
 
 // Map initialization callback
 function setupMap() {
@@ -638,11 +613,11 @@ function getBezierCurve(start, end) {
 
 // Initialize loading process
 function initFluidMap() {
-    loadGoogleMapsScript().then(() => {
-        console.log("Google Maps API script dynamically loaded.");
-    }).catch(err => {
-        console.error("Failed to load Google Maps script dynamically:", err);
-    });
+    if (window.googleMapsLoaded) {
+        setupMap();
+    } else {
+        console.log("Waiting for Google Maps static script tag callback...");
+    }
 }
 
 // Adding recommended POIs from the sidebar

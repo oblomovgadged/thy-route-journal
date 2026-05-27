@@ -24,6 +24,18 @@
     <!-- Canvas Confetti -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>
 
+    <!-- Google Maps API (Static Loader with Race Condition Guard) -->
+    <script>
+      window.initMap = function() {
+        if (window.setupMap) {
+          window.setupMap();
+        } else {
+          window.googleMapsLoaded = true;
+        }
+      };
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCTFajPJSFiTgXvDdK5AKp6aMwjrRRGhCg&libraries=places&callback=initMap" async defer></script>
+
     <!-- EmailJS SDK -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js" defer></script>
     <!-- Join URL: Hide search layer via CSS instead of document.write -->
