@@ -1,1 +1,9 @@
 .vercel
+
+# API Keys — Bu dosya repoya push edilmemeli
+js/config.js
+
+# Backups & VS Code
+*.bak
+.vscode/
+

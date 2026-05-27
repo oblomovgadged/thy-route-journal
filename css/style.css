@@ -12,11 +12,44 @@ body {
 }
 
 /* 1. Fluid Map Background */
-#map-bg {
+#map {
   position: absolute;
   top: 0; left: 0; width: 100vw; height: 100vh;
   z-index: 1;
   pointer-events: auto !important;
+}
+
+/* Google Maps Autocomplete Search Box */
+.map-search-container {
+  position: absolute;
+  top: 6rem;
+  left: 2rem;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  width: 320px;
+  border-radius: 30px !important;
+}
+
+.map-search-container input {
+  border: none;
+  background: transparent;
+  font-family: var(--font-primary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--thy-dark-blue);
+  width: 100%;
+}
+
+.map-search-container input:focus {
+  outline: none;
+}
+
+.map-search-container .search-icon {
+  color: var(--thy-red);
+  font-size: 1.2rem;
 }
 
 /* Glassmorphism Base Layer */
@@ -1280,13 +1313,21 @@ body {
   }
 
   /* Make sure map and sidebar do not stack on mobile, keep 100vh height */
-  #map-bg {
+  #map {
     height: 100vh !important;
     height: 100dvh !important;
     width: 100vw !important;
     position: absolute !important;
     top: 0;
     left: 0;
+  }
+
+  .map-search-container {
+    top: 4.5rem !important;
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+    width: auto !important;
+    margin: 0 !important;
   }
 
   #journal-sidebar {
@@ -1455,7 +1496,7 @@ body {
 /* Android 100dvh support fallback */
 @supports (height: 100dvh) {
   @media (max-width: 768px) {
-    #map-bg { height: 100dvh !important; }
+    #map { height: 100dvh !important; }
     #journal-sidebar { height: 100dvh !important; }
   }
 }

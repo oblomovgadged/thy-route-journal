@@ -20,25 +20,21 @@
     <!-- CSS -->
     <link rel="stylesheet" href="./css/style.css">
     <!-- Phosphor Icons -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web" defer></script>
     <!-- Canvas Confetti -->
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <!-- Leaflet.js -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>
+
     <!-- EmailJS SDK -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script type="text/javascript">
-       (function(){
-          emailjs.init('Cwjj37r4vlqMA8F83');
-       })();
-    </script>
-    <!-- Query Parameter Routing Helper (Prevents Flash of Unstyled Content) -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js" defer></script>
+    <!-- Join URL: Hide search layer via CSS instead of document.write -->
     <script type="text/javascript">
        (function() {
-          const urlParams = new URLSearchParams(window.location.search);
-          if (urlParams.get('join') === 'true' && urlParams.get('trip')) {
-             document.write('<style>#search-layer, #flight-selection-layer { display: none !important; }</style>');
+          var p = new URLSearchParams(window.location.search);
+          if (p.get('join') === 'true' && p.get('trip')) {
+             var s = document.createElement('style');
+             s.id = 'join-flow-override-style';
+             s.textContent = '#search-layer, #flight-selection-layer { display: none !important; }';
+             document.head.appendChild(s);
           }
        })();
     </script>
@@ -46,13 +42,19 @@
 <body>
 
     <!-- 1. Background Fluid Map -->
-    <div id="map-bg"></div>
+    <div id="map"></div>
+
+    <!-- Google Maps Autocomplete Search Box -->
+    <div id="map-search-container" class="map-search-container glass-panel">
+        <i class="ph ph-magnifying-glass search-icon"></i>
+        <input type="text" id="map-search-input" placeholder="Google Maps'te mekan veya şehir arayın...">
+    </div>
 
     <!-- 2. Branding Overlay -->
     <div class="floating-brand glass-panel" style="border-radius: 50px;">
         <i class="ph-fill ph-airplane-tilt brand-logo"></i>
         <span class="brand-title" style="margin-right: 1rem;">THY Route</span>
-        <button id="btn-reset" class="btn" style="padding: 0.5rem; background: transparent;"><i class="ph ph-arrow-counter-clockwise"></i> Başa Dön</button>
+        <button id="btn-reset" class="btn" style="padding: 0.5rem; background: transparent;" onclick="resetToSearch()"><i class="ph ph-arrow-counter-clockwise"></i> Başa Dön</button>
     </div>
 
     <!-- 3. Search Engine Layer (Glassmorphism) -->
@@ -63,13 +65,13 @@
                 <!-- Origin -->
                 <div class="input-group">
                     <label>Nereden</label>
-                    <input type="text" id="origin" placeholder="Örn: Istanbul (IST)" value="Istanbul (IST)" autocomplete="off" required>
+                    <input type="text" id="origin-input" placeholder="Örn: Istanbul (IST)" value="Istanbul (IST)" autocomplete="off" required>
                     <div id="origin-autocomplete" class="autocomplete-list"></div>
                 </div>
                 <!-- Destination -->
                 <div class="input-group">
                     <label>Nereye</label>
-                    <input type="text" id="destination" placeholder="Örn: Tokyo (NRT)" autocomplete="off" required>
+                    <input type="text" id="dest-input" placeholder="Örn: Tokyo (NRT)" autocomplete="off" required>
                     <div id="dest-autocomplete" class="autocomplete-list"></div>
                 </div>
                 <!-- Dates -->
@@ -82,7 +84,7 @@
                     <input type="date" id="inbound-date" required>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem; font-size: 1.2rem;">
+            <button type="submit" id="search-btn" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem; font-size: 1.2rem;">
                 <i class="ph-bold ph-airplane-takeoff"></i> Uçuş Bul ve Planla
             </button>
         </form>
@@ -116,12 +118,18 @@
         </div>
 
         <!-- Travel Saved Routes Manager -->
-        <div class="saved-routes-manager" style="padding: 0.75rem 1.5rem; border-bottom: 1px solid var(--thy-grey-border); background: rgba(255,255,255,0.4); display: flex; gap: 0.5rem; align-items: center; justify-content: space-between;">
+        <div class="saved-routes-manager" style="padding: 0.75rem 1.5rem; border-bottom: 1px solid var(--thy-grey-border); background: rgba(255,255,255,0.4); display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
             <button id="btn-save-current-trip" class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; background: var(--thy-dark-blue); color: white; border-radius: 20px; font-weight: 600;" onclick="saveActiveTripToSavedList()">
-                <i class="ph-bold ph-floppy-disk"></i> Planı Kaydet
+                <i class="ph-bold ph-floppy-disk"></i> Kaydet
             </button>
-            <div class="saved-trips-dropdown-wrapper" style="position: relative; flex: 1; max-width: 60%;">
-                <select id="saved-trips-select" style="width: 100%; padding: 0.4rem 0.8rem; font-size: 0.75rem; border-radius: 20px; border: 1px solid var(--thy-grey-border); background: white; font-family: var(--font-primary); font-weight: 600; color: var(--thy-dark-blue); cursor: pointer;" onchange="loadSavedTripFromDropdown(this.value)">
+            <button id="export-trip-btn" class="btn" style="padding: 0.4rem 0.6rem; font-size: 0.75rem; background: #059669; color: white; border-radius: 20px; font-weight: 600;" title="Planı dışa aktar">
+                <i class="ph-bold ph-export"></i> Dışa Aktar
+            </button>
+            <button id="import-trip-btn" class="btn" style="padding: 0.4rem 0.6rem; font-size: 0.75rem; background: #0ea5e9; color: white; border-radius: 20px; font-weight: 600;" title="Plan içe aktar">
+                <i class="ph-bold ph-download-simple"></i> İçe Aktar
+            </button>
+            <div class="saved-trips-dropdown-wrapper" style="position: relative; flex: 1; min-width: 120px;">
+                <select id="saved-trips-select" style="width: 100%; padding: 0.4rem 0.8rem; font-size: 0.75rem; border-radius: 20px; border: 1px solid var(--thy-grey-border); background: white; font-family: var(--font-primary); font-weight: 600; color: var(--thy-dark-blue); cursor: pointer;">
                     <option value="">✈ Kayıtlı Rotalarım...</option>
                 </select>
             </div>
@@ -178,7 +186,7 @@
             </div>
             <div class="modal-body">
                 <p style="color: var(--thy-grey-text); margin-bottom: 1rem; font-size: 0.95rem;">Rota planına sevdiklerinizi ekleyin ve THY ayrıcalıklarıyla birlikte keşfedin.</p>
-                <form id="invite-form-premium">
+                <form id="premium-invite-form">
                     <div class="input-group" style="margin-bottom: 1.5rem;">
                         <input type="email" id="invite-email" placeholder="E-posta Adresi" required style="width: 100%;" autocomplete="off">
                     </div>
@@ -191,7 +199,7 @@
     </div>
 
     <!-- Mobile Map/Plan Toggle Button -->
-    <button id="btn-mobile-toggle" class="mobile-toggle-btn">
+    <button id="mobile-toggle-btn" class="mobile-toggle-btn">
         <span id="mobile-toggle-text">🗺️ Haritayı Göster</span>
     </button>
 
@@ -210,7 +218,15 @@
         </div>
     </div>
 
+    <!-- Modular JS Architecture -->
+    <script src="./js/config.js"></script>
     <script src="./js/data.js"></script>
-    <script src="./js/app.js"></script>
+    <script src="./js/state.js"></script>
+    <script src="./js/utils.js"></script>
+    <script src="./js/map.js"></script>
+    <script src="./js/flights.js"></script>
+    <script src="./js/journal.js"></script>
+    <script src="./js/trips.js"></script>
+    <script src="./js/init.js"></script>
 </body>
 </html>

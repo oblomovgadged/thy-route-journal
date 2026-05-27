@@ -1,14 +1,18 @@
-const CACHE_NAME = 'thy-route-v2';
+const CACHE_NAME = 'thy-route-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/css/style.css',
   '/css/variables.css',
+  '/js/config.js',
   '/js/data.js',
-  '/js/app.js',
+  '/js/state.js',
+  '/js/utils.js',
   '/js/map.js',
-  '/js/collab.js',
-  '/data/destinations.json',
+  '/js/flights.js',
+  '/js/journal.js',
+  '/js/trips.js',
+  '/js/init.js',
   '/manifest.json'
 ];
 
@@ -81,7 +85,6 @@ self.addEventListener('fetch', (event) => {
           (url.origin === self.location.origin || 
            url.origin.includes('unpkg.com') || 
            url.origin.includes('cdn.jsdelivr.net') || 
-           url.origin.includes('tile.openstreetmap.org') ||
            url.origin.includes('wikimedia.org'))
         ) {
           const responseToCache = networkResponse.clone();
@@ -92,7 +95,8 @@ self.addEventListener('fetch', (event) => {
         return networkResponse;
       }).catch((err) => {
         // Fallback for offline map tiles or index.html
-        if (event.request.headers.get('accept').includes('text/html')) {
+        const acceptHeader = event.request.headers.get('accept');
+        if (acceptHeader && acceptHeader.includes('text/html')) {
           return caches.match('/index.html');
         }
         console.warn('[Service Worker] Fetch failed offline:', event.request.url, err);
